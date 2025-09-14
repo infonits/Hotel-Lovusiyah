@@ -1,0 +1,78 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Icon } from '@iconify/react';
+
+export default function Login() {
+    const [showPassword, setShowPassword] = useState(false);
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20 font-inter px-4">
+            <div className="max-w-md w-full p-8 bg-white/70 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-md">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-slate-800 to-slate-600 rounded-xl flex items-center justify-center">
+                        <Icon icon="lucide:building" className="text-white" width="20" height="20" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-semibold text-slate-800">Hotel Lovusiyah
+                        </h1>
+                        <p className="text-xs text-slate-500">Login to your dashboard</p>
+                    </div>
+                </div>
+
+                <form className="space-y-5">
+                    <div>
+                        <label className="block text-sm text-slate-700 mb-1">Email</label>
+                        <div className="flex items-center px-3 py-2.5 border border-slate-300 rounded-xl bg-white">
+                            <Icon icon="lucide:mail" width="18" className="text-slate-500 mr-2" />
+                            <input
+                                type="email"
+                                placeholder="you@example.com"
+                                className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm text-slate-700 mb-1">Password</label>
+                        <div className="flex items-center px-3 py-2.5 border border-slate-300 rounded-xl bg-white">
+                            <Icon icon="lucide:lock" width="18" className="text-slate-500 mr-2" />
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="ml-2 text-slate-500 hover:text-slate-700"
+                            >
+                                <Icon icon={showPassword ? 'lucide:eye-off' : 'lucide:eye'} width="18" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm text-slate-600">
+                        <label className="flex items-center gap-2">
+                            <input type="checkbox" className="rounded" />
+                            Remember me
+                        </label>
+                        <a href="#" className="hover:underline">Forgot password?</a>
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="w-full bg-slate-900 text-white py-3 rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2"
+                    >
+                        <Icon icon="lucide:log-in" width="18" />
+                        Login
+                    </button>
+                </form>
+
+                <p className="mt-6 text-xs text-slate-500 text-center">
+                    Don’t have an account? <a href="#" className="text-slate-700 font-medium hover:underline">Sign up</a>
+                </p>
+            </div>
+        </div>
+    );
+}
