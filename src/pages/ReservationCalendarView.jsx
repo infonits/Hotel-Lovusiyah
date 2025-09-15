@@ -291,7 +291,7 @@ export default function ReservationCalendarView() {
                         {/* Selected Day Info */}
                         {selectedDate ? (
                             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
-                                <div className="flex items-center justify-between mb-4">
+                                <div className="flex flex-col items-center justify-between mb-4">
                                     <h4 className="text-lg font-semibold text-slate-800">
                                         {monthNames[month]} {selectedDate}, {year}
                                     </h4>
