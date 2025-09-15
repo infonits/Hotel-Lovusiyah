@@ -1,10 +1,24 @@
-'use client';
 
 import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/authContext';
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+    const { login } = useAuth(); // ✅ from AuthContext
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        if (email && password) {
+            login({ email }); // store in context + localStorage
+            navigate('/'); // go to Dashboard (protected)
+        }
+    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20 font-inter px-4">
@@ -14,21 +28,23 @@ export default function Login() {
                         <Icon icon="lucide:building" className="text-white" width="20" height="20" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-semibold text-slate-800">Hotel Lovusiyah
-                        </h1>
+                        <h1 className="text-xl font-semibold text-slate-800">Hotel Lovusiyah</h1>
                         <p className="text-xs text-slate-500">Login to your dashboard</p>
                     </div>
                 </div>
 
-                <form className="space-y-5">
+                <form className="space-y-5" onSubmit={handleSubmit}>
                     <div>
                         <label className="block text-sm text-slate-700 mb-1">Email</label>
                         <div className="flex items-center px-3 py-2.5 border border-slate-300 rounded-xl bg-white">
                             <Icon icon="lucide:mail" width="18" className="text-slate-500 mr-2" />
                             <input
                                 type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 placeholder="you@example.com"
                                 className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+                                required
                             />
                         </div>
                     </div>
@@ -39,8 +55,11 @@ export default function Login() {
                             <Icon icon="lucide:lock" width="18" className="text-slate-500 mr-2" />
                             <input
                                 type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+                                required
                             />
                             <button
                                 type="button"
@@ -57,7 +76,7 @@ export default function Login() {
                             <input type="checkbox" className="rounded" />
                             Remember me
                         </label>
-                        <a href="#" className="hover:underline">Forgot password?</a>
+                        <a href="/forgot-password" className="hover:underline">Forgot password?</a>
                     </div>
 
                     <button

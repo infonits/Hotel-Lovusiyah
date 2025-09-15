@@ -1,27 +1,23 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './Home';
 import Rooms from './Rooms';
-
-const primaryColor = 'bg-slate-900';
-const accentColor = 'bg-emerald-50 border-emerald-200';
-const cardBg = 'bg-white/70 backdrop-blur-sm';
-const textPrimary = 'text-slate-800';
-const textSecondary = 'text-slate-600';
-const textMuted = 'text-slate-400';
+import ReservationCalendarView from './ReservationCalendarView';
 
 const navItems = [
-    { label: 'Overview', icon: 'lucide:layout-dashboard', href: '#', active: true },
-    { label: 'Reservations', icon: 'lucide:calendar-check', href: '#' },
-    { label: 'Guests', icon: 'lucide:users', href: '#' },
-    { label: 'Rooms', icon: 'lucide:bed', href: '#' },
-    { label: 'Housekeeping', icon: 'lucide:sparkles', href: '#' },
-    { label: 'Analytics', icon: 'lucide:trending-up', href: '#' },
-    { label: 'Settings', icon: 'lucide:settings', href: '#' },
+    { label: 'Overview', icon: 'lucide:layout-dashboard', href: '/dashboard/overview' },
+    { label: 'Reservations', icon: 'lucide:calendar-check', href: '/dashboard/reservations' },
+    { label: 'Guests', icon: 'lucide:users', href: '/dashboard/guests' },
+    { label: 'Rooms', icon: 'lucide:bed', href: '/dashboard/rooms' },
+    { label: 'Services', icon: 'lucide:sparkles', href: '/dashboard/housekeeping' },
+    { label: 'Expenses', icon: 'lucide:settings', href: '/dashboard/settings' },
+    { label: 'Reports', icon: 'lucide:trending-up', href: '/dashboard/analytics' },
 ];
 
-
 export default function HotelDashboard() {
+    const location = useLocation();
+
     return (
         <div className="min-h-screen flex font-inter bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20">
             {/* Sidebar */}
@@ -32,8 +28,7 @@ export default function HotelDashboard() {
                             <Icon icon="lucide:building" className="text-white" width="20" height="20" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-semibold text-slate-800">Hotel Lovusiyah
-                            </h1>
+                            <h1 className="text-xl font-semibold text-slate-800">Hotel Lovusiyah</h1>
                             <p className="text-xs text-slate-500">Management Suite</p>
                         </div>
                     </div>
@@ -41,19 +36,20 @@ export default function HotelDashboard() {
 
                 <nav className="flex-1 p-6 space-y-2">
                     {navItems.map((item) => (
-                        <a
+                        <Link
                             key={item.label}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${item.active
+                            to={item.href}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === item.href
                                 ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/25'
                                 : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'
                                 }`}
                         >
                             <Icon icon={item.icon} width="18" height="18" />
                             <span>{item.label}</span>
-                        </a>
+                        </Link>
                     ))}
                 </nav>
+
                 <div className="p-6 border-t border-slate-200/60">
                     <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white">
                         <p className="text-xs text-emerald-100 mb-3">Infonits Product</p>
@@ -82,8 +78,18 @@ export default function HotelDashboard() {
                     </div>
                 </header>
 
-                {/* <Home /> */}
-                <Rooms />
+                {/* Inner Routes */}
+                <div className="flex-1 overflow-y-auto p-6">
+                    <Routes>
+                        <Route path="overview" element={<Home />} />
+                        <Route path="rooms" element={<Rooms />} />
+                        <Route path="reservations" element={<ReservationCalendarView />} />
+                        <Route path="guests" element={<div>Guests Page</div>} />
+                        <Route path="housekeeping" element={<div>Services Page</div>} />
+                        <Route path="analytics" element={<div>Analytics Page</div>} />
+                        <Route path="settings" element={<div>Expenses Page</div>} />
+                    </Routes>
+                </div>
             </main>
         </div>
     );
