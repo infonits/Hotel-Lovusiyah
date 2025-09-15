@@ -10,6 +10,7 @@ import Expenses from './Expenses';
 import Reports from './Reports';
 import CreateReservation from './CreateReservation';
 import Menus from './Menus';
+import ReservationView from './ReservationView';
 
 const navItems = [
     // { label: 'Overview', icon: 'lucide:layout-dashboard', href: '/dashboard/overview' },
@@ -96,6 +97,7 @@ export default function HotelDashboard() {
                         <Route path="housekeeping" element={<Services />} />
                         <Route path="analytics" element={<Reports />} />
                         <Route path="expenses" element={<Expenses />} />
+                        <Route path="reservation/view" element={<ReservationView />} />
                         <Route path="create-reservation" element={<CreateReservation />} />
                     </Routes>
                 </div>
