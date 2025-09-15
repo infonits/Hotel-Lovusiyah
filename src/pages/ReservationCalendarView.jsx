@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
+import { useNavigate } from 'react-router-dom';
 
 // Generate sample data for 50 rooms
 const generateRoomData = () => {
@@ -78,7 +79,7 @@ export default function ReservationCalendarView() {
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedRoomFilter, setSelectedRoomFilter] = useState('all');
     const [viewMode, setViewMode] = useState('availability'); // 'availability' or 'occupancy'
-
+    const navigate = useNavigate()
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -90,7 +91,9 @@ export default function ReservationCalendarView() {
         setCurrentDate(new Date(year, month + direction));
         setSelectedDate(null);
     };
-
+    const handleNavigate = () => {
+        navigate('/dashboard/create-reservation')
+    }
     const getDateReservations = (day) => {
         if (!day) return {};
         const dateKey = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
@@ -133,8 +136,8 @@ export default function ReservationCalendarView() {
                             <button
                                 onClick={() => setViewMode('availability')}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'availability'
-                                        ? 'bg-slate-900 text-white shadow-sm'
-                                        : 'text-slate-600 hover:text-slate-800'
+                                    ? 'bg-slate-900 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-800'
                                     }`}
                             >
                                 Availability
@@ -142,14 +145,14 @@ export default function ReservationCalendarView() {
                             <button
                                 onClick={() => setViewMode('occupancy')}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'occupancy'
-                                        ? 'bg-slate-900 text-white shadow-sm'
-                                        : 'text-slate-600 hover:text-slate-800'
+                                    ? 'bg-slate-900 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-800'
                                     }`}
                             >
                                 Occupancy
                             </button>
                         </div>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors">
+                        <button onClick={handleNavigate} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors">
                             <Icon icon="lucide:plus" width="16" height="16" />
                             <span className="text-sm font-medium">New Reservation</span>
                         </button>
@@ -215,10 +218,10 @@ export default function ReservationCalendarView() {
                                             key={day}
                                             onClick={() => setSelectedDate(day)}
                                             className={`aspect-square p-2 rounded-lg cursor-pointer transition-all duration-200 border-2 ${isSelected
-                                                    ? 'border-slate-900 bg-slate-900 text-white'
-                                                    : isToday
-                                                        ? 'border-emerald-500 bg-emerald-50'
-                                                        : 'border-transparent hover:bg-slate-50'
+                                                ? 'border-slate-900 bg-slate-900 text-white'
+                                                : isToday
+                                                    ? 'border-emerald-500 bg-emerald-50'
+                                                    : 'border-transparent hover:bg-slate-50'
                                                 }`}
                                         >
                                             <div className="h-full flex flex-col justify-between">
@@ -240,9 +243,9 @@ export default function ReservationCalendarView() {
                                                     <div className="flex items-end justify-center">
                                                         <div
                                                             className={`w-full rounded-sm ${availability.rate >= 80 ? 'bg-red-400' :
-                                                                    availability.rate >= 60 ? 'bg-amber-400' :
-                                                                        availability.rate >= 40 ? 'bg-blue-400' :
-                                                                            'bg-emerald-400'
+                                                                availability.rate >= 60 ? 'bg-amber-400' :
+                                                                    availability.rate >= 40 ? 'bg-blue-400' :
+                                                                        'bg-emerald-400'
                                                                 }`}
                                                             style={{
                                                                 height: `${Math.max(availability.rate * 0.6, 8)}px`,
@@ -321,8 +324,8 @@ export default function ReservationCalendarView() {
                                                 <div className="flex items-start justify-between mb-1">
                                                     <span className="font-medium text-slate-800">Room {reservation.room}</span>
                                                     <span className={`px-2 py-1 rounded text-xs font-medium ${reservation.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                                                            reservation.status === 'checked-in' ? 'bg-blue-100 text-blue-700' :
-                                                                'bg-amber-100 text-amber-700'
+                                                        reservation.status === 'checked-in' ? 'bg-blue-100 text-blue-700' :
+                                                            'bg-amber-100 text-amber-700'
                                                         }`}>
                                                         {reservation.status}
                                                     </span>

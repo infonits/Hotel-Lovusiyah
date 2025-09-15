@@ -1,297 +1,236 @@
+// Rooms component matching design system with status and bedType removed + placeholders added
+
 import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 
-const navItems = [
-    { label: 'Overview', icon: 'lucide:layout-dashboard', href: '#' },
-    { label: 'Reservations', icon: 'lucide:calendar-check', href: '#', active: true },
-    { label: 'Guests', icon: 'lucide:users', href: '#' },
-    { label: 'Rooms', icon: 'lucide:bed', href: '#' },
-    { label: 'Housekeeping', icon: 'lucide:sparkles', href: '#' },
-    { label: 'Analytics', icon: 'lucide:trending-up', href: '#' },
-    { label: 'Settings', icon: 'lucide:settings', href: '#' },
+const roomsData = [
+    {
+        id: 'RM001',
+        number: '101',
+        type: 'Deluxe',
+        capacity: 2,
+        price: 12000,
+        facilities: ['Wi-Fi', 'TV', 'AC'],
+        description: 'Sea-facing room with modern amenities.',
+        createdAt: '2025-09-10',
+    },
+    {
+        id: 'RM002',
+        number: '102',
+        type: 'Standard',
+        capacity: 2,
+        price: 9000,
+        facilities: ['Wi-Fi', 'TV'],
+        description: 'Budget-friendly room with essential facilities.',
+        createdAt: '2025-09-11',
+    },
 ];
-
-const reservationsData = [
-    {
-        id: 'RES001',
-        guest: 'Sarah Johnson',
-        email: 'sarah.johnson@email.com',
-        room: '205',
-        roomType: 'Deluxe Suite',
-        checkIn: '2025-09-15',
-        checkOut: '2025-09-18',
-        status: 'confirmed',
-        amount: '$450',
-        phone: '+1 234-567-8901'
-    },
-    {
-        id: 'RES002',
-        guest: 'Michael Chen',
-        email: 'michael.chen@email.com',
-        room: '108',
-        roomType: 'Standard Room',
-        checkIn: '2025-09-16',
-        checkOut: '2025-09-19',
-        status: 'pending',
-        amount: '$280',
-        phone: '+1 234-567-8902'
-    },
-    {
-        id: 'RES003',
-        guest: 'Emma Wilson',
-        email: 'emma.wilson@email.com',
-        room: '312',
-        roomType: 'Premium Suite',
-        checkIn: '2025-09-17',
-        checkOut: '2025-09-20',
-        status: 'checked-in',
-        amount: '$650',
-        phone: '+1 234-567-8903'
-    },
-    {
-        id: 'RES004',
-        guest: 'James Rodriguez',
-        email: 'james.rodriguez@email.com',
-        room: '156',
-        roomType: 'Family Room',
-        checkIn: '2025-09-18',
-        checkOut: '2025-09-22',
-        status: 'confirmed',
-        amount: '$520',
-        phone: '+1 234-567-8904'
-    },
-    {
-        id: 'RES005',
-        guest: 'Lisa Anderson',
-        email: 'lisa.anderson@email.com',
-        room: '423',
-        roomType: 'Executive Suite',
-        checkIn: '2025-09-19',
-        checkOut: '2025-09-21',
-        status: 'cancelled',
-        amount: '$750',
-        phone: '+1 234-567-8905'
-    },
-    {
-        id: 'RES006',
-        guest: 'David Park',
-        email: 'david.park@email.com',
-        room: '289',
-        roomType: 'Standard Room',
-        checkIn: '2025-09-20',
-        checkOut: '2025-09-23',
-        status: 'confirmed',
-        amount: '$330',
-        phone: '+1 234-567-8906'
-    },
-    {
-        id: 'RES007',
-        guest: 'Sophie Martin',
-        email: 'sophie.martin@email.com',
-        room: '367',
-        roomType: 'Deluxe Suite',
-        checkIn: '2025-09-21',
-        checkOut: '2025-09-24',
-        status: 'pending',
-        amount: '$480',
-        phone: '+1 234-567-8907'
-    },
-    {
-        id: 'RES008',
-        guest: 'Robert Taylor',
-        email: 'robert.taylor@email.com',
-        room: '145',
-        roomType: 'Premium Suite',
-        checkIn: '2025-09-22',
-        checkOut: '2025-09-25',
-        status: 'checked-out',
-        amount: '$680',
-        phone: '+1 234-567-8908'
-    }
-];
-
-const statusColors = {
-    'confirmed': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    'pending': 'bg-amber-100 text-amber-700 border-amber-200',
-    'checked-in': 'bg-blue-100 text-blue-700 border-blue-200',
-    'checked-out': 'bg-slate-100 text-slate-700 border-slate-200',
-    'cancelled': 'bg-red-100 text-red-700 border-red-200'
-};
 
 export default function Rooms() {
+    const [rooms, setRooms] = useState(roomsData);
+    const [showNewRoom, setShowNewRoom] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [roomTypeFilter, setRoomTypeFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
+
     const itemsPerPage = 5;
 
-    // Filter data
-    const filteredData = reservationsData.filter(reservation => {
-        const matchesSearch = reservation.guest.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            reservation.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            reservation.id.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || reservation.status === statusFilter;
-        const matchesRoomType = roomTypeFilter === 'all' || reservation.roomType === roomTypeFilter;
-
-        return matchesSearch && matchesStatus && matchesRoomType;
+    const filteredRooms = rooms.filter((room) => {
+        const term = searchTerm.toLowerCase();
+        return (
+            room.number.toLowerCase().includes(term) ||
+            room.type.toLowerCase().includes(term) ||
+            room.description.toLowerCase().includes(term)
+        );
     });
 
-    // Pagination
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredRooms.length / itemsPerPage) || 1;
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedData = filteredRooms.slice(startIndex, startIndex + itemsPerPage);
 
-    const uniqueRoomTypes = [...new Set(reservationsData.map(r => r.roomType))];
+    const [form, setForm] = useState({
+        number: '',
+        type: '',
+        capacity: '',
+        price: '',
+        facilities: '',
+        description: '',
+    });
+
+    const handleCreateRoom = () => {
+        if (!form.number.trim() || !form.type.trim()) return;
+        const id = 'RM' + Math.floor(Math.random() * 900 + 100).toString().padStart(3, '0');
+        const newRoom = {
+            id,
+            number: form.number.trim(),
+            type: form.type.trim(),
+            capacity: parseInt(form.capacity),
+            price: parseFloat(form.price),
+            facilities: form.facilities.split(',').map((f) => f.trim()).filter(Boolean),
+            description: form.description.trim(),
+            createdAt: new Date().toISOString().slice(0, 10),
+        };
+        setRooms([newRoom, ...rooms]);
+        setShowNewRoom(false);
+        setForm({ number: '', type: '', capacity: '', price: '', facilities: '', description: '' });
+        setCurrentPage(1);
+    };
 
     return (
-        <>
-
-            {/* Content */}
-            <div className="flex-1 p-8 overflow-y-auto">
-                {/* Filters */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
-                    <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-                        <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                            <div className="relative flex-1 max-w-md">
-                                <Icon icon="lucide:search" width="20" height="20" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search reservations..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
-                                />
-                            </div>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
-                            >
-                                <option value="all">All Status</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="pending">Pending</option>
-                                <option value="checked-in">Checked In</option>
-                                <option value="checked-out">Checked Out</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                            <select
-                                value={roomTypeFilter}
-                                onChange={(e) => setRoomTypeFilter(e.target.value)}
-                                className="px-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
-                            >
-                                <option value="all">All Room Types</option>
-                                {uniqueRoomTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <span>Showing {paginatedData.length} of {filteredData.length} reservations</span>
-                        </div>
+        <div className="flex-1 p-8 overflow-y-auto">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
+                <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                    <div className="relative flex-1 max-w-md">
+                        <Icon icon="lucide:search" width="20" height="20" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search rooms..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+                        />
                     </div>
-                </div>
-
-                {/* Table */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-slate-50/50">
-                                <tr>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Reservation ID</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Guest</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Room</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check In</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check Out</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Status</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Amount</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {paginatedData.map((reservation, index) => (
-                                    <tr key={reservation.id} className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <span className="font-medium text-slate-800">{reservation.id}</span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div>
-                                                <p className="font-medium text-slate-800">{reservation.guest}</p>
-                                                <p className="text-sm text-slate-600">{reservation.email}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div>
-                                                <p className="font-medium text-slate-800">Room {reservation.room}</p>
-                                                <p className="text-sm text-slate-600">{reservation.roomType}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-700">{reservation.checkIn}</td>
-                                        <td className="px-6 py-4 text-slate-700">{reservation.checkOut}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusColors[reservation.status]}`}>
-                                                {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1).replace('-', ' ')}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 font-semibold text-slate-800">{reservation.amount}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <button className="p-2 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-600 transition-colors">
-                                                    <Icon icon="lucide:eye" width="16" height="16" />
-                                                </button>
-                                                <button className="p-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 transition-colors">
-                                                    <Icon icon="lucide:edit" width="16" height="16" />
-                                                </button>
-                                                <button className="p-2 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 transition-colors">
-                                                    <Icon icon="lucide:trash-2" width="16" height="16" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination */}
-                    <div className="px-6 py-4 border-t border-slate-200/50 bg-slate-50/30">
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm text-slate-600">
-                                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredData.length)} of {filteredData.length} results
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <Icon icon="lucide:chevron-left" width="16" height="16" />
-                                </button>
-
-                                {[...Array(totalPages)].map((_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        onClick={() => setCurrentPage(i + 1)}
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === i + 1
-                                            ? 'bg-slate-900 text-white'
-                                            : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                                            }`}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
-
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <Icon icon="lucide:chevron-right" width="16" height="16" />
-                                </button>
-                            </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowNewRoom(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+                        >
+                            <Icon icon="lucide:plus" width="18" height="18" />
+                            New Room
+                        </button>
+                        <div className="text-sm text-slate-600">
+                            <span>Showing {paginatedData.length} of {filteredRooms.length} rooms</span>
                         </div>
                     </div>
                 </div>
             </div>
-        </>
+
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-slate-50/50">
+                            <tr>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Room ID</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Number</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Type</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Capacity</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Price</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Facilities</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginatedData.map((room) => (
+                                <tr key={room.id} className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors">
+                                    <td className="px-6 py-4 font-medium text-slate-800">{room.id}</td>
+                                    <td className="px-6 py-4 text-slate-700">{room.number}</td>
+                                    <td className="px-6 py-4 text-slate-700">{room.type}</td>
+                                    <td className="px-6 py-4 text-slate-700">{room.capacity}</td>
+                                    <td className="px-6 py-4 text-slate-700">LKR {room.price.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-slate-700">
+                                        {room.facilities.map((f, idx) => (
+                                            <span key={idx} className="inline-block text-xs px-2 py-1 mr-1 mb-1 bg-slate-100 rounded">{f}</span>
+                                        ))}
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-700">{room.createdAt}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {showNewRoom && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowNewRoom(false)} />
+                    <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl border border-white/20 shadow-xl">
+                        <div className="px-6 py-4 border-b border-slate-200/60 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-slate-800">Add New Room</h3>
+                            <button
+                                onClick={() => setShowNewRoom(false)}
+                                className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                            >
+                                <Icon icon="lucide:x" width="18" height="18" />
+                            </button>
+                        </div>
+                        <div className="p-6 grid md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-700">Room Number</label>
+                                <input
+                                    placeholder="e.g., 101"
+                                    value={form.number}
+                                    onChange={(e) => setForm({ ...form, number: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-700">Type</label>
+                                <input
+                                    placeholder="e.g., Deluxe"
+                                    value={form.type}
+                                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-700">Capacity</label>
+                                <input
+                                    placeholder="e.g., 2"
+                                    type="number"
+                                    value={form.capacity}
+                                    onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-700">Price</label>
+                                <input
+                                    placeholder="e.g., 12000"
+                                    type="number"
+                                    value={form.price}
+                                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                                />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                                <label className="text-sm font-medium text-slate-700">Facilities</label>
+                                <input
+                                    placeholder="e.g., Wi-Fi, TV, AC"
+                                    value={form.facilities}
+                                    onChange={(e) => setForm({ ...form, facilities: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                                />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                                <label className="text-sm font-medium text-slate-700">Description</label>
+                                <textarea
+                                    placeholder="Brief room description..."
+                                    value={form.description}
+                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                    className="w-full min-h-[60px] px-3 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                                />
+                            </div>
+                            <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+                                <button
+                                    onClick={() => setShowNewRoom(false)}
+                                    className="px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreateRoom}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+                                >
+                                    <Icon icon="lucide:plus" width="16" height="16" />
+                                    Create Room
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }

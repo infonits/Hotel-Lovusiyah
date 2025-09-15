@@ -4,6 +4,11 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './Home';
 import Rooms from './Rooms';
 import ReservationCalendarView from './ReservationCalendarView';
+import Guests from './Guests';
+import Services from './Services';
+import Expenses from './Expenses';
+import Reports from './Reports';
+import CreateReservation from './CreateReservation';
 
 const navItems = [
     { label: 'Overview', icon: 'lucide:layout-dashboard', href: '/dashboard/overview' },
@@ -11,7 +16,7 @@ const navItems = [
     { label: 'Guests', icon: 'lucide:users', href: '/dashboard/guests' },
     { label: 'Rooms', icon: 'lucide:bed', href: '/dashboard/rooms' },
     { label: 'Services', icon: 'lucide:sparkles', href: '/dashboard/housekeeping' },
-    { label: 'Expenses', icon: 'lucide:settings', href: '/dashboard/settings' },
+    { label: 'Expenses', icon: 'lucide:settings', href: '/dashboard/expenses' },
     { label: 'Reports', icon: 'lucide:trending-up', href: '/dashboard/analytics' },
 ];
 
@@ -84,10 +89,11 @@ export default function HotelDashboard() {
                         <Route path="overview" element={<Home />} />
                         <Route path="rooms" element={<Rooms />} />
                         <Route path="reservations" element={<ReservationCalendarView />} />
-                        <Route path="guests" element={<div>Guests Page</div>} />
-                        <Route path="housekeeping" element={<div>Services Page</div>} />
-                        <Route path="analytics" element={<div>Analytics Page</div>} />
-                        <Route path="settings" element={<div>Expenses Page</div>} />
+                        <Route path="guests" element={<Guests />} />
+                        <Route path="housekeeping" element={<Services />} />
+                        <Route path="analytics" element={<Reports />} />
+                        <Route path="expenses" element={<Expenses />} />
+                        <Route path="create-reservation" element={<CreateReservation />} />
                     </Routes>
                 </div>
             </main>
