@@ -71,7 +71,7 @@ export default function HotelDashboard() {
                 <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200/60 px-8 py-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800">Good morning, Alex</h2>
+                            <h2 className="text-2xl font-bold text-slate-800">Good morning</h2>
                             <p className="text-slate-600 mt-1">Here's what's happening at your hotel today</p>
                         </div>
                         <div className="flex items-center gap-4">

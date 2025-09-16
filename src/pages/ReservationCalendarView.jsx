@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 
-// Generate sample data for 50 rooms
+// Generate sample data for 25 rooms
 const generateRoomData = () => {
     const rooms = [];
     const roomTypes = ['Standard', 'Deluxe', 'Suite', 'Premium', 'Executive'];
 
-    for (let i = 1; i <= 50; i++) {
+    for (let i = 1; i <= 25; i++) {
         rooms.push({
             number: i.toString().padStart(3, '0'),
             type: roomTypes[Math.floor(Math.random() * roomTypes.length)],
@@ -28,10 +28,10 @@ const generateReservations = () => {
         reservations[dateKey] = {};
 
         // Randomly assign reservations (40-70% occupancy)
-        const occupancyRate = 0.4 + Math.random() * 0.3;
-        const reservedRooms = Math.floor(50 * occupancyRate);
+        const occupancyRate = 0.1 + Math.random() * 0.1;
+        const reservedRooms = Math.floor(25 * occupancyRate);
 
-        const shuffledRooms = [...Array(50)].map((_, i) => (i + 1).toString().padStart(3, '0')).sort(() => Math.random() - 0.5);
+        const shuffledRooms = [...Array(25)].map((_, i) => (i + 1).toString().padStart(3, '0')).sort(() => Math.random() - 0.5);
 
         for (let j = 0; j < reservedRooms; j++) {
             const roomNumber = shuffledRooms[j];
@@ -85,8 +85,11 @@ export default function ReservationCalendarView() {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-    const calendarDays = generateCalendarDays(year, month);
 
+    const calendarDays = generateCalendarDays(year, month);
+    const openReservation = (resv) => {
+        navigate('/dashboard/reservation/view', { state: { reservation: resv } });
+    };
     const navigateMonth = (direction) => {
         setCurrentDate(new Date(year, month + direction));
         setSelectedDate(null);
@@ -104,8 +107,8 @@ export default function ReservationCalendarView() {
         if (!day) return { available: 0, reserved: 0, rate: 0 };
         const dayReservations = getDateReservations(day);
         const reserved = Object.keys(dayReservations).length;
-        const available = 50 - reserved;
-        const rate = (reserved / 50) * 100;
+        const available = 25 - reserved;
+        const rate = (reserved / 25) * 100;
         return { available, reserved, rate };
     };
 
@@ -201,7 +204,7 @@ export default function ReservationCalendarView() {
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-7 gap-1">
+                            <div className="grid grid-cols-7 gap-1 ">
                                 {calendarDays.map((day, index) => {
                                     if (!day) {
                                         return <div key={index} className="aspect-square"></div>;
@@ -217,11 +220,11 @@ export default function ReservationCalendarView() {
                                         <div
                                             key={day}
                                             onClick={() => setSelectedDate(day)}
-                                            className={`aspect-square p-2 rounded-lg cursor-pointer transition-all duration-200 border-2 ${isSelected
+                                            className={`aspect-square p-2 rounded-lg cursor-pointer transition-all duration-200 border-2   ${isSelected
                                                 ? 'border-slate-900 bg-slate-900 text-white'
                                                 : isToday
                                                     ? 'border-emerald-500 bg-emerald-50'
-                                                    : 'border-transparent hover:bg-slate-50'
+                                                    : 'border-gray-100 hover:bg-slate-50'
                                                 }`}
                                         >
                                             <div className="h-full flex flex-col justify-between">
@@ -320,7 +323,14 @@ export default function ReservationCalendarView() {
                                     <h5 className="font-medium text-slate-800 mb-3">Reservations ({getRoomAvailability(selectedDate).reserved})</h5>
                                     <div className="space-y-2 max-h-64 overflow-y-auto">
                                         {getSelectedDateReservations().map(reservation => (
-                                            <div key={reservation.room} className="p-3 bg-slate-50/50 rounded-lg">
+                                            <button
+                                                key={reservation.room}
+                                                onClick={() => openReservation({
+                                                    ...reservation,
+                                                    date: `${year}-${(month + 1).toString().padStart(2, '0')}-${selectedDate.toString().padStart(2, '0')}`
+                                                })}
+                                                className="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100 transition"
+                                            >
                                                 <div className="flex items-start justify-between mb-1">
                                                     <span className="font-medium text-slate-800">Room {reservation.room}</span>
                                                     <span className={`px-2 py-1 rounded text-xs font-medium ${reservation.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
@@ -334,8 +344,9 @@ export default function ReservationCalendarView() {
                                                     <div>{reservation.guest}</div>
                                                     <div className="text-xs mt-1">{reservation.email}</div>
                                                 </div>
-                                            </div>
+                                            </button>
                                         ))}
+
                                         {getRoomAvailability(selectedDate).reserved === 0 && (
                                             <p className="text-sm text-slate-500 text-center py-4">No reservations for this day</p>
                                         )}
@@ -362,7 +373,7 @@ export default function ReservationCalendarView() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-600">Total Rooms</span>
-                                    <span className="font-medium text-slate-800">50</span>
+                                    <span className="font-medium text-slate-800">25</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-600">Peak Day</span>
