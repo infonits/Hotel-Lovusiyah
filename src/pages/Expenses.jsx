@@ -60,7 +60,7 @@ export default function Expenses() {
     }, [filteredExpenses]);
 
     const handleAddExpense = () => {
-        const id = `EXP${(expenses.length + 1).toString().padStart(3, '0')}`;
+        const id = `EXP LKR {(expenses.length + 1).toString().padStart(3, '0')}`;
         setExpenses(prev => [...prev, { id, ...newExpense, amount: parseFloat(newExpense.amount) }]);
         setShowModal(false);
         setNewExpense({ title: '', category: 'Utilities', amount: '', date: dayjs().format('YYYY-MM-DD'), notes: '' });
@@ -163,7 +163,7 @@ export default function Expenses() {
                                     <td className="px-6 py-4 text-slate-800 font-medium">{exp.id}</td>
                                     <td className="px-6 py-4 text-slate-800">{exp.title}</td>
                                     <td className="px-6 py-4 text-slate-800">{exp.category}</td>
-                                    <td className="px-6 py-4 text-slate-800">${exp.amount.toFixed(2)}</td>
+                                    <td className="px-6 py-4 text-slate-800">LKR {exp.amount.toFixed(2)}</td>
                                     <td className="px-6 py-4 text-slate-800">{dayjs(exp.date).format('MMM D, YYYY')}</td>
                                     <td className="px-6 py-4 text-slate-800">{exp.notes}</td>
                                 </tr>
@@ -178,7 +178,7 @@ export default function Expenses() {
                         Showing {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''}
                     </div>
                     <div className="text-sm font-semibold text-slate-800">
-                        Total: ${totalAmount.toFixed(2)}
+                        Total: LKR {totalAmount.toFixed(2)}
                     </div>
                 </div>
             </div>

@@ -21,7 +21,7 @@ const reservationsData = [
         checkIn: '2025-09-15',
         checkOut: '2025-09-18',
         status: 'confirmed',
-        amount: '$450',
+        amount: 'LKR450',
         phone: '+1 234-567-8901'
     },
     {
@@ -33,7 +33,7 @@ const reservationsData = [
         checkIn: '2025-09-16',
         checkOut: '2025-09-19',
         status: 'pending',
-        amount: '$280',
+        amount: 'LKR280',
         phone: '+1 234-567-8902'
     },
     {
@@ -45,7 +45,7 @@ const reservationsData = [
         checkIn: '2025-09-17',
         checkOut: '2025-09-20',
         status: 'checked-in',
-        amount: '$650',
+        amount: 'LKR650',
         phone: '+1 234-567-8903'
     },
     {
@@ -57,7 +57,7 @@ const reservationsData = [
         checkIn: '2025-09-18',
         checkOut: '2025-09-22',
         status: 'confirmed',
-        amount: '$520',
+        amount: 'LKR520',
         phone: '+1 234-567-8904'
     },
     {
@@ -69,7 +69,7 @@ const reservationsData = [
         checkIn: '2025-09-19',
         checkOut: '2025-09-21',
         status: 'cancelled',
-        amount: '$750',
+        amount: 'LKR750',
         phone: '+1 234-567-8905'
     },
     {
@@ -81,7 +81,7 @@ const reservationsData = [
         checkIn: '2025-09-20',
         checkOut: '2025-09-23',
         status: 'confirmed',
-        amount: '$330',
+        amount: 'LKR330',
         phone: '+1 234-567-8906'
     },
     {
@@ -93,7 +93,7 @@ const reservationsData = [
         checkIn: '2025-09-21',
         checkOut: '2025-09-24',
         status: 'pending',
-        amount: '$480',
+        amount: 'LKR480',
         phone: '+1 234-567-8907'
     },
     {
@@ -105,7 +105,7 @@ const reservationsData = [
         checkIn: '2025-09-22',
         checkOut: '2025-09-25',
         status: 'checked-out',
-        amount: '$680',
+        amount: 'LKR680',
         phone: '+1 234-567-8908'
     }
 ];

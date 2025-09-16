@@ -164,7 +164,7 @@ export default function ReservationCalendarView() {
             </header>
 
             <div className="flex-1 p-8 overflow-y-auto">
-                <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
                     {/* Calendar */}
                     <div className="xl:col-span-3">
                         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
@@ -290,7 +290,7 @@ export default function ReservationCalendarView() {
                     </div>
 
                     {/* Sidebar - Day Details */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 xl:col-span-2">
                         {/* Selected Day Info */}
                         {selectedDate ? (
                             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
@@ -329,7 +329,7 @@ export default function ReservationCalendarView() {
                                                     ...reservation,
                                                     date: `${year}-${(month + 1).toString().padStart(2, '0')}-${selectedDate.toString().padStart(2, '0')}`
                                                 })}
-                                                className="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100 transition"
+                                                className="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                                             >
                                                 <div className="flex items-start justify-between mb-1">
                                                     <span className="font-medium text-slate-800">Room {reservation.room}</span>

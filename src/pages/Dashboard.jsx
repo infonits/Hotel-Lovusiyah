@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/authContext';
+
+// Page imports
 import Home from './Home';
 import Rooms from './Rooms';
 import ReservationCalendarView from './ReservationCalendarView';
@@ -13,7 +16,6 @@ import Menus from './Menus';
 import ReservationView from './ReservationView';
 
 const navItems = [
-    // { label: 'Overview', icon: 'lucide:layout-dashboard', href: '/dashboard/overview' },
     { label: 'Reservations', icon: 'lucide:calendar-check', href: '/dashboard/reservations' },
     { label: 'Guests', icon: 'lucide:users', href: '/dashboard/guests' },
     { label: 'Rooms', icon: 'lucide:bed', href: '/dashboard/rooms' },
@@ -25,11 +27,59 @@ const navItems = [
 
 export default function HotelDashboard() {
     const location = useLocation();
+    const [time, setTime] = useState(new Date());
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const { logout } = useAuth();
+    const dropdownRef = useRef(null);
+
+    // Update time every second
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setDropdownOpen(false);
+            }
+        };
+        if (dropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [dropdownOpen]);
+
+    // Greeting by time
+    const getGreeting = () => {
+        const hour = time.getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 18) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    // Toggle fullscreen
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+        setDropdownOpen(false);
+    };
+
+    // Handle logout
+    const handleLogout = async () => {
+        await logout();
+    };
 
     return (
         <div className="min-h-screen flex font-inter bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20">
             {/* Sidebar */}
-            <aside className="w-72 h-screen sticky top-0 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col">
+            <aside className="w-65 h-screen sticky top-0 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col">
                 <div className="p-6 border-b border-slate-200/60">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-r from-slate-800 to-slate-600 rounded-xl flex items-center justify-center">
@@ -48,8 +98,8 @@ export default function HotelDashboard() {
                             key={item.label}
                             to={item.href}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === item.href
-                                ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/25'
-                                : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'
+                                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/25'
+                                    : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'
                                 }`}
                         >
                             <Icon icon={item.icon} width="18" height="18" />
@@ -66,30 +116,49 @@ export default function HotelDashboard() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col overflow-hidden">
+            <main className="flex-1 flex flex-col">
                 {/* Header */}
-                <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200/60 px-8 py-6">
+                <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200/60 px-8 py-6 relative z-40">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800">Good morning</h2>
-                            <p className="text-slate-600 mt-1">Here's what's happening at your hotel today</p>
+                            <h2 className="text-2xl font-bold text-slate-800">{getGreeting()}</h2>
+                            <p className="text-slate-600 mt-1">
+                                Current time: {time.toLocaleTimeString()}
+                            </p>
                         </div>
-                        <div className="flex items-center gap-4">
-                            {/* <button className="relative p-2 rounded-xl bg-slate-100/70 hover:bg-slate-200/70 transition-colors">
-                                <Icon icon="lucide:bell" width="20" height="20" className="text-slate-600" />
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-                            </button> */}
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-slate-600 to-slate-800 flex items-center justify-center">
+
+                        {/* Dropdown Trigger */}
+                        <div className="relative" ref={dropdownRef}>
+                            <div
+                                className="w-10 h-10 rounded-xl bg-gradient-to-r from-slate-600 to-slate-800 flex items-center justify-center cursor-pointer"
+                                onClick={() => setDropdownOpen((prev) => !prev)}
+                            >
                                 <span className="text-white font-medium text-sm">AC</span>
                             </div>
+
+                            {dropdownOpen && (
+                                <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                                    <button
+                                        onClick={toggleFullscreen}
+                                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                                    >
+                                        Fullscreen
+                                    </button>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                                    >
+                                        Logout
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>
 
                 {/* Inner Routes */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-6 relative z-0">
                     <Routes>
-                        {/* <Route path="overview" element={<Home />} /> */}
                         <Route path="rooms" element={<Rooms />} />
                         <Route path="menus" element={<Menus />} />
                         <Route path="reservations" element={<ReservationCalendarView />} />

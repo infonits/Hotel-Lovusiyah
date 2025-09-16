@@ -1,16 +1,9 @@
 // Hotel Services Page Component — updated to include Add Service modal and remove Type
+// Supabase CRUD wired without changing your design
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-
-const initialServices = [
-    { id: 'SRV001', name: 'Laundry', price: 500, status: 'active' },
-    { id: 'SRV002', name: 'Room Cleaning', price: 300, status: 'inactive' },
-    { id: 'SRV003', name: 'Spa Access', price: 1500, status: 'active' },
-    { id: 'SRV004', name: 'Extra Bed', price: 800, status: 'active' },
-    { id: 'SRV005', name: 'Gym Access', price: 400, status: 'inactive' },
-    { id: 'SRV006', name: 'Mini Bar', price: 1200, status: 'active' }
-];
+import { supabase } from '../lib/supabse';
 
 const statusColors = {
     active: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -18,36 +11,124 @@ const statusColors = {
 };
 
 export default function ServicesPage() {
-    const [services, setServices] = useState(initialServices);
+    // ---- STATE (same visual behavior) ----
+    const [services, setServices] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newService, setNewService] = useState({ name: '', price: '', status: 'active' });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [editingId, setEditingId] = useState(null); // null = creating, string = editing existing
     const itemsPerPage = 5;
 
-    const filtered = services.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    // ---- HELPERS ----
+    const fetchServices = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const { data, error: err } = await supabase
+                .from('services')
+                .select('id, name, price, status, created_at')
+                .order('created_at', { ascending: false });
 
-    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            if (err) throw err;
+            setServices(data || []);
+        } catch (e) {
+            setError(e.message || 'Failed to load services');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const handleAddService = () => {
-        const id = `SRV${(services.length + 1).toString().padStart(3, '0')}`;
+    // compute next id like SRV001, SRV002 …
+    const makeNextId = () => {
+        const nums = services
+            .map((s) => Number((s.id || '').replace(/^SRV/, '')))
+            .filter((n) => Number.isFinite(n));
+        const max = nums.length ? Math.max(...nums) : 0;
+        return `SRV${String(max + 1).padStart(3, '0')}`;
+    };
+
+    useEffect(() => {
+        fetchServices();
+    }, []);
+
+    // ---- FILTERS, SEARCH, PAGINATION (unchanged visually) ----
+    const filtered = useMemo(() => {
+        return services.filter((s) => {
+            const matchesSearch = s.name?.toLowerCase().includes(search.toLowerCase());
+            const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [services, search, statusFilter]);
+
+    const paginated = useMemo(() => {
+        return filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    }, [filtered, currentPage]);
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+
+    // ---- CREATE / UPDATE ----
+    const handleAddService = async () => {
         const price = parseFloat(newService.price);
         if (!newService.name || isNaN(price)) return;
-        const newItem = { id, name: newService.name, price, status: newService.status };
-        setServices(prev => [newItem, ...prev]);
-        setShowAddForm(false);
-        setNewService({ name: '', price: '', status: 'active' });
+
+        setError('');
+        try {
+            if (editingId) {
+                // UPDATE
+                const { error: err } = await supabase
+                    .from('services')
+                    .update({ name: newService.name, price, status: newService.status })
+                    .eq('id', editingId);
+                if (err) throw err;
+            } else {
+                // INSERT
+                const id = makeNextId();
+                const { error: err } = await supabase
+                    .from('services')
+                    .insert({ id, name: newService.name, price, status: newService.status });
+                if (err) throw err;
+            }
+
+            await fetchServices();
+            setShowAddForm(false);
+            setNewService({ name: '', price: '', status: 'active' });
+            setEditingId(null);
+            setCurrentPage(1);
+        } catch (e) {
+            setError(e.message || 'Save failed');
+        }
+    };
+
+    // ---- EDIT OPEN ----
+    const openEdit = (svc) => {
+        setEditingId(svc.id);
+        setNewService({ name: svc.name || '', price: String(svc.price ?? ''), status: svc.status || 'active' });
+        setShowAddForm(true);
+    };
+
+    // ---- DELETE ----
+    const handleDelete = async (svc) => {
+        if (!window.confirm(`Delete service "${svc.name}" (${svc.id})?`)) return;
+        setError('');
+        try {
+            const { error: err } = await supabase.from('services').delete().eq('id', svc.id);
+            if (err) throw err;
+            await fetchServices();
+            if ((currentPage - 1) * itemsPerPage >= filtered.length - 1 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
+        } catch (e) {
+            setError(e.message || 'Delete failed');
+        }
     };
 
     return (
         <div className="flex-1 p-8 overflow-y-auto">
-            {/* Filters & Add New */}
+            {/* Filters & Add New (unchanged visually) */}
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
                 <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                     <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -57,13 +138,13 @@ export default function ServicesPage() {
                                 type="text"
                                 placeholder="Search services..."
                                 value={search}
-                                onChange={e => setSearch(e.target.value)}
+                                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                                 className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm"
                             />
                         </div>
                         <select
                             value={statusFilter}
-                            onChange={e => setStatusFilter(e.target.value)}
+                            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                             className="px-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm"
                         >
                             <option value="all">All Status</option>
@@ -71,22 +152,29 @@ export default function ServicesPage() {
                             <option value="inactive">Inactive</option>
                         </select>
                     </div>
+
                     <button
-                        onClick={() => setShowAddForm(true)}
+                        onClick={() => { setEditingId(null); setNewService({ name: '', price: '', status: 'active' }); setShowAddForm(true); }}
                         className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                     >
                         <Icon icon="lucide:plus" className="w-4 h-4" /> Add New Service
                     </button>
                 </div>
+
+                {loading && (
+                    <div className="mt-3 text-sm text-slate-600">Loading…</div>
+                )}
+                {error && (
+                    <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</div>
+                )}
             </div>
 
-            {/* Table */}
+            {/* Table (unchanged visually) */}
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-slate-50/50">
                             <tr>
-                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">ID</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Service</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Price (LKR)</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Status</th>
@@ -96,35 +184,47 @@ export default function ServicesPage() {
                         <tbody>
                             {paginated.map(service => (
                                 <tr key={service.id} className="border-t border-slate-200/50 hover:bg-slate-50/30">
-                                    <td className="px-6 py-4 font-medium text-slate-800">{service.id}</td>
+
                                     <td className="px-6 py-4 text-slate-700">{service.name}</td>
-                                    <td className="px-6 py-4 text-slate-700">{service.price.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-slate-700">{Number(service.price || 0).toLocaleString()}</td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusColors[service.status]}`}>
-                                            {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
+                                            {service.status?.charAt(0).toUpperCase() + service.status?.slice(1)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex gap-2">
-                                            <button className="p-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600">
+                                            <button
+                                                onClick={() => openEdit(service)}
+                                                className="p-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600"
+                                            >
                                                 <Icon icon="lucide:edit" width="16" height="16" />
                                             </button>
-                                            <button className="p-2 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600">
+                                            <button
+                                                onClick={() => handleDelete(service)}
+                                                className="p-2 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600"
+                                            >
                                                 <Icon icon="lucide:trash-2" width="16" height="16" />
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
                             ))}
+
+                            {!loading && paginated.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">No services found.</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Pagination */}
+                {/* Pagination (unchanged visually) */}
                 <div className="px-6 py-4 border-t border-slate-200/50 bg-slate-50/30">
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-slate-600">
-                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} results
+                            Showing {(currentPage - 1) * itemsPerPage + (filtered.length ? 1 : 0)} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} results
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -155,11 +255,13 @@ export default function ServicesPage() {
                 </div>
             </div>
 
-            {/* Add New Service Modal */}
+            {/* Add/Edit Service Modal (same design; just re-used for edit) */}
             {showAddForm && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-xl w-full max-w-md">
-                        <h2 className="text-lg font-semibold mb-4 text-slate-800">Add New Service</h2>
+                        <h2 className="text-lg font-semibold mb-4 text-slate-800">
+                            {editingId ? 'Edit Service' : 'Add New Service'}
+                        </h2>
                         <div className="flex flex-col gap-4">
                             <input
                                 type="text"
@@ -185,9 +287,22 @@ export default function ServicesPage() {
                             </select>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <button onClick={() => setShowAddForm(false)} className="px-4 py-2 text-slate-600 hover:text-slate-900">Cancel</button>
-                            <button onClick={handleAddService} className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800">Add</button>
+                            <button
+                                onClick={() => { setShowAddForm(false); setEditingId(null); }}
+                                className="px-4 py-2 text-slate-600 hover:text-slate-900"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAddService}
+                                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                            >
+                                {editingId ? 'Save' : 'Add'}
+                            </button>
                         </div>
+                        {error && (
+                            <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</div>
+                        )}
                     </div>
                 </div>
             )}
