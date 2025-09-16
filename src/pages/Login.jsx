@@ -75,10 +75,7 @@ export default function Login() {
                     </div>
 
                     <div className="flex justify-between items-center text-sm text-slate-600">
-                        <label className="flex items-center gap-2">
-                            <input type="checkbox" className="rounded" />
-                            Remember me
-                        </label>
+
                         <a href="/forgot-password" className="hover:underline">Forgot password?</a>
                     </div>
 
@@ -91,9 +88,7 @@ export default function Login() {
                     </button>
                 </form>
 
-                <p className="mt-6 text-xs text-slate-500 text-center">
-                    Don’t have an account? <a href="#" className="text-slate-700 font-medium hover:underline">Sign up</a>
-                </p>
+
             </div>
         </div>
     );

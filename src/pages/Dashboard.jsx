@@ -94,7 +94,7 @@ export default function HotelDashboard() {
                     </div>
                 </div>
 
-                <nav className="flex-1 p-6 space-y-2">
+                <nav className="flex-1 px-6 space-y-2">
                     {navItems.map((item) => (
                         <Link
                             key={item.label}
@@ -109,34 +109,29 @@ export default function HotelDashboard() {
                         </Link>
                     ))}
                 </nav>
+                <div className='flex-1 px-6 py-2 space-y-2'>
+                    <hr className='border-gray-300' />
+
+                    <span onClick={toggleFullscreen} className='cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'>
+                        <Icon icon="mingcute:fullscreen-line" width="18" height="18" />
+
+                        FullScreen</span>
+                </div>
                 {/* Dropdown Trigger */}
-                <div className="relative" ref={dropdownRef}>
+                <div className='px-6'>
                     <div
-                        className="w-10 h-10 rounded-xl bg-gradient-to-r from-slate-600 to-slate-800 flex items-center justify-center cursor-pointer"
-                        onClick={() => setDropdownOpen((prev) => !prev)}
+                        className="rounded-xl bg-gradient-to-r from-slate-600 to-slate-800 flex items-center px-3 cursor-pointer"
+                        onClick={() => logout()}
                     >
-                        <span className="text-white font-medium text-sm">AC</span>
+
+                        <Icon icon="material-symbols:logout-rounded" width="18" height="18" className='text-white' />
+
+                        <p className="text-white text-left font-medium  text-sm py-3 px-3">Logout</p>
                     </div>
 
-                    {dropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
-                            <button
-                                onClick={toggleFullscreen}
-                                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                            >
-                                Fullscreen
-                            </button>
-                            <button
-                                onClick={handleLogout}
-                                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    )}
                 </div>
-                <div className="p-6 border-t border-slate-200/60">
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white">
+                <div className="px-6 border-t border-slate-200/60 pt-2">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-3 text-white">
                         <p className="text-xs text-emerald-100 mb-3">Infonits Product</p>
                     </div>
                 </div>
