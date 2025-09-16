@@ -264,21 +264,16 @@ export default function Guests() {
                         <table className="w-full">
                             <thead className="bg-slate-50/50">
                                 <tr>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Guest ID</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Guest</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">NIC / Passport</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Contact</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Address</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Created</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {paginatedData.map((g) => (
                                     <tr key={g.id} className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <span className="font-medium text-slate-800">{g.id}</span>
-                                        </td>
+
                                         <td className="px-6 py-4">
                                             <div>
                                                 <p className="font-medium text-slate-800">{g.name}</p>
@@ -298,19 +293,8 @@ export default function Guests() {
                                                 {g.email && <p className="text-sm text-slate-600">{g.email}</p>}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-slate-700">
-                                                <p className="font-medium">{g.address}</p>
-                                                {(g.city || g.country) && (
-                                                    <p className="text-sm text-slate-600">
-                                                        {[g.city, g.country].filter(Boolean).join(', ')}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </td>
 
 
-                                        <td className="px-6 py-4 text-slate-700">{g.createdAt}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <button className="p-2 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-600 transition-colors">
