@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@iconify/react": "^6.0.1",
+    "@supabase/supabase-js": "^2.57.4",
     "@tailwindcss/vite": "^4.1.13",
     "country-list": "^2.4.1",
     "dayjs": "^1.11.18",

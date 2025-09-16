@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
@@ -11,12 +10,16 @@ export default function Login() {
     const navigate = useNavigate();
     const { login } = useAuth(); // ✅ from AuthContext
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (email && password) {
-            login({ email }); // store in context + localStorage
-            navigate('/'); // go to Dashboard (protected)
+        try {
+            if (email && password) {
+                await login({ email, password }); // Supabase email login
+                navigate('/'); // go to Dashboard (protected)
+            }
+        } catch (err) {
+            // Keep UI unchanged: use alert for error (no extra UI elements added)
+            alert(err?.message || 'Login failed');
         }
     };
 
