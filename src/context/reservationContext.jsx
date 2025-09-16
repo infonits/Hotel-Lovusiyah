@@ -1,3 +1,4 @@
+'use client';
 
 import React, { createContext, useContext, useMemo, useEffect, useState } from 'react';
 import dayjs from 'dayjs';
@@ -96,6 +97,11 @@ export function ReservationProvider({ initialReservation, children }) {
         () => dayjs(initialReservation.checkOutDate).diff(dayjs(initialReservation.checkInDate), 'day'),
         [initialReservation]
     );
+    const fmt = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n.toFixed(2) : '0.00';
+    };
+
 
     const roomCharges = useMemo(
         () => (initialReservation.rooms || []).reduce((sum, r) => sum + (Number(r.price || 0) * nights), 0),
@@ -183,115 +189,116 @@ export function ReservationProvider({ initialReservation, children }) {
     const deletePayment = (id) => setPayments((prev) => prev.filter((x) => x._id !== id));
 
     // Print PDF (same as your page)
-    const handlePrint = () => {
+    const handlePrint = async () => {
+        const { default: jsPDF } = await import('jspdf');
+        const { default: autoTable } = await import('jspdf-autotable');
+
         const doc = new jsPDF();
-        const res = initialReservation;
+        const res = initialReservation || {};
 
         // Header
         doc.setFontSize(16);
         doc.text('Hotel Bill / Invoice', 14, 16);
         doc.setFontSize(10);
         doc.text(`Reservation: ${res.code || '-'}`, 14, 22);
-        doc.text(`Date: ${dayjs().format('YYYY-MM-DD HH:mm')}`, 150, 22, { align: 'right' });
+        doc.text(`Date: ${dayjs().format('YYYY-MM-DD HH:mm')}`, 200 - 14, 22, { align: 'right' });
 
         // Guest & Stay
         doc.setFontSize(12);
         doc.text('Guest & Stay', 14, 32);
         doc.setFontSize(10);
-        const lines = [
+        [
             `Guest: ${res.guest?.name || '-'} (${res.guest?.nicNumber || '-'})`,
             `Phone: ${res.guest?.phone || '-'}   Email: ${res.guest?.email || '-'}`,
             `Check-in: ${dayjs(res.checkInDate).format('YYYY-MM-DD')}   Check-out: ${dayjs(res.checkOutDate).format('YYYY-MM-DD')}`,
             `Rooms: ${(res.rooms || []).map((r) => r.roomNumber).join(', ') || '-'}`,
             `Nights: ${nights}`,
-        ];
-        lines.forEach((l, i) => doc.text(l, 14, 38 + i * 6));
+        ].forEach((l, i) => doc.text(l, 14, 38 + i * 6));
 
         // Rooms
-        doc.autoTable({
+        autoTable(doc, {
             startY: 68,
             head: [['Room', 'Type', 'Rate (LKR)', 'Nights', 'Amount (LKR)']],
             body: (res.rooms || []).map((r) => [
                 r.roomNumber,
                 r.type,
-                (r.price || 0).toFixed(2),
+                fmt(r.price), ,
                 nights,
-                (nights * (r.price || 0)).toFixed(2),
+                fmt(nights * (r.price || 0)), ,
             ]),
             theme: 'grid',
             styles: { fontSize: 9 },
             headStyles: { fillColor: [15, 23, 42] },
         });
 
-        let y = doc.lastAutoTable.finalY + 8;
+        let y = (doc.lastAutoTable?.finalY ?? 68) + 8;
 
         // Services
         doc.text('Services', 14, y);
-        doc.autoTable({
+        autoTable(doc, {
             startY: y + 4,
             head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-            body: (services.length ? services : [['—', '—', '—', '0.00']]).map((s) =>
-                Array.isArray(s) ? s : [s.title, s.qty, (s.rate || 0).toFixed(2), (s.amount || 0).toFixed(2)]
-            ),
+            body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
+                s.title, s.qty, fmt(s.rate), fmt(s.amount)
+            ]),
             theme: 'grid',
             styles: { fontSize: 9 },
             headStyles: { fillColor: [15, 23, 42] },
         });
 
-        y = doc.lastAutoTable.finalY + 8;
+        y = (doc.lastAutoTable?.finalY ?? y) + 8;
 
         // Foods
         doc.text('Foods', 14, y);
-        doc.autoTable({
+        autoTable(doc, {
             startY: y + 4,
             head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-            body: (foods.length ? foods : [['—', '—', '—', '0.00']]).map((f) =>
-                Array.isArray(f) ? f : [f.title, f.qty, (f.rate || 0).toFixed(2), (f.amount || 0).toFixed(2)]
-            ),
+            body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
+                f.title, f.qty, fmt(f.rate), fmt(f.amount)
+            ]),
             theme: 'grid',
             styles: { fontSize: 9 },
             headStyles: { fillColor: [15, 23, 42] },
         });
 
-        y = doc.lastAutoTable.finalY + 8;
+        y = (doc.lastAutoTable?.finalY ?? y) + 8;
 
         // Payments
         doc.text('Payments', 14, y);
-        doc.autoTable({
+        autoTable(doc, {
             startY: y + 4,
             head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
-            body: (payments.length ? payments : [['—', '—', '—', '0.00']]).map((p) =>
-                Array.isArray(p) ? p : [p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), (p.amount || 0).toFixed(2)]
-            ),
+            body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
+                p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), fmt(p.amount)
+            ]),
             theme: 'grid',
             styles: { fontSize: 9 },
             headStyles: { fillColor: [15, 23, 42] },
         });
 
-        y = doc.lastAutoTable.finalY + 10;
+        y = (doc.lastAutoTable?.finalY ?? y) + 10;
 
         // Totals
         doc.setFontSize(12);
         doc.text('Totals', 14, y);
-        doc.setFontSize(10);
-        const totalsTable = [
-            ['Room Charges', (roomCharges || 0).toFixed(2)],
-            ['Other Charges', (otherCharges || 0).toFixed(2)],
-            ['Total', (total || 0).toFixed(2)],
-            ['Paid', (paid || 0).toFixed(2)],
-            ['Balance', (balance || 0).toFixed(2)],
-        ];
-        doc.autoTable({
+        autoTable(doc, {
             startY: y + 6,
             head: [['Label', 'Amount (LKR)']],
-            body: totalsTable,
+            body: [
+                ['Room Charges', fmt(roomCharges)],
+                ['Other Charges', fmt(otherCharges)],
+                ['Total', fmt(total)],
+                ['Paid', fmt(paid)],
+                ['Balance', fmt(balance)],
+            ],
             theme: 'plain',
             styles: { fontSize: 10 },
             columnStyles: { 1: { halign: 'right' } },
         });
 
-        doc.save(`${initialReservation.code || 'reservation'}.pdf`);
+        doc.save(`${res.code || 'reservation'}.pdf`);
     };
+
 
     const value = {
         currencyLKR,
