@@ -15,7 +15,7 @@ export function ReservationProvider({ initialReservation, children }) {
     const [foodCatalog, setFoodCatalog] = useState([]);       // [{id,title,rate,category}]
     const [catalogLoading, setCatalogLoading] = useState(true);
 
-    // Items (now persisted in Supabase)
+    // Items persisted in Supabase (TWO TABLES)
     const [services, setServices] = useState([]); // [{_id,title,qty,rate,amount}]
     const [foods, setFoods] = useState([]);       // [{_id,title,qty,rate,amount}]
     const [itemsLoading, setItemsLoading] = useState(true);
@@ -43,25 +43,22 @@ export function ReservationProvider({ initialReservation, children }) {
         amount: 0,
     });
 
-    /* -------------------- Catalogs -------------------- */
+    /* ---------- Catalogs ---------- */
     useEffect(() => {
         let alive = true;
         (async () => {
             setCatalogLoading(true);
             try {
-                // services (active)
-                const { data: svc, error: svcErr } = await supabase
-                    .from('services')
-                    .select('id, name, price, status')
-                    .eq('status', 'active')
-                    .order('name', { ascending: true });
+                const [{ data: svc, error: svcErr }, { data: menus, error: menuErr }] = await Promise.all([
+                    supabase.from('services')
+                        .select('id, name, price, status')
+                        .eq('status', 'active')
+                        .order('name', { ascending: true }),
+                    supabase.from('menus')
+                        .select('id, name, price, category')
+                        .order('name', { ascending: true })
+                ]);
                 if (svcErr) throw svcErr;
-
-                // menus
-                const { data: menus, error: menuErr } = await supabase
-                    .from('menus')
-                    .select('id, name, price, category')
-                    .order('name', { ascending: true });
                 if (menuErr) throw menuErr;
 
                 if (!alive) return;
@@ -79,54 +76,50 @@ export function ReservationProvider({ initialReservation, children }) {
         return () => { alive = false; };
     }, []);
 
-    /* -------------------- Items (services + foods) -------------------- */
-    const mapItemRow = (r) => ({
+    /* ---------- Items (two tables) ---------- */
+    const mapRow = (r) => ({
         _id: r.id,
         title: r.title,
         qty: Number(r.qty || 0),
         rate: Number(r.rate || 0),
         amount: Number(r.amount || 0),
-        kind: r.kind
     });
 
     const reloadItems = useCallback(async () => {
         if (!initialReservation?.id) {
-            setServices([]);
-            setFoods([]);
-            setItemsLoading(false);
+            setServices([]); setFoods([]); setItemsLoading(false);
             return;
         }
         setItemsLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('reservation_items')
-                .select('id, kind, title, qty, rate, amount, created_at')
-                .eq('reservation_id', initialReservation.id)
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            const rows = (data || []).map(mapItemRow);
-            setServices(rows.filter(r => r.kind === 'service'));
-            setFoods(rows.filter(r => r.kind === 'food'));
+            const [svcRes, foodRes] = await Promise.all([
+                supabase.from('reservation_services')
+                    .select('id, title, qty, rate, amount, created_at')
+                    .eq('reservation_id', initialReservation.id)
+                    .order('created_at', { ascending: false }),
+                supabase.from('reservation_foods')
+                    .select('id, title, qty, rate, amount, created_at')
+                    .eq('reservation_id', initialReservation.id)
+                    .order('created_at', { ascending: false }),
+            ]);
+            if (svcRes.error) throw svcRes.error;
+            if (foodRes.error) throw foodRes.error;
+
+            setServices((svcRes.data || []).map(mapRow));
+            setFoods((foodRes.data || []).map(mapRow));
         } catch (e) {
             console.error('Items load failed:', e);
-            setServices([]);
-            setFoods([]);
+            setServices([]); setFoods([]);
         } finally {
             setItemsLoading(false);
         }
     }, [initialReservation?.id]);
 
-    useEffect(() => {
-        reloadItems();
-    }, [reloadItems]);
+    useEffect(() => { reloadItems(); }, [reloadItems]);
 
-    /* -------------------- Payments -------------------- */
+    /* ---------- Payments ---------- */
     const reloadPayments = useCallback(async () => {
-        if (!initialReservation?.id) {
-            setPayments([]);
-            setPaymentsLoading(false);
-            return;
-        }
+        if (!initialReservation?.id) { setPayments([]); setPaymentsLoading(false); return; }
         setPaymentsLoading(true);
         try {
             const { data, error } = await supabase
@@ -151,17 +144,14 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     }, [initialReservation?.id]);
 
-    useEffect(() => {
-        reloadPayments();
-    }, [reloadPayments]);
+    useEffect(() => { reloadPayments(); }, [reloadPayments]);
 
-    /* -------------------- Auto math for item form -------------------- */
+    /* ---------- Item form helpers ---------- */
     useEffect(() => {
         setItemForm(f => ({ ...f, amount: Number(f.qty || 0) * Number(f.rate || 0) }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [itemForm.qty, itemForm.rate]);
 
-    // Seed item form when modal toggles
     useEffect(() => {
         if (itemModalOpen) {
             if (itemEditing) {
@@ -178,7 +168,7 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     }, [itemModalOpen, itemEditing]);
 
-    // Payment modal hydrate
+    /* ---------- Payment form hydrate ---------- */
     useEffect(() => {
         if (paymentModalOpen) {
             if (paymentEditing) {
@@ -200,7 +190,7 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     }, [paymentModalOpen, paymentEditing]);
 
-    /* -------------------- Totals -------------------- */
+    /* ---------- Totals ---------- */
     const nights = useMemo(
         () => dayjs(initialReservation.checkOutDate).diff(dayjs(initialReservation.checkInDate), 'day'),
         [initialReservation]
@@ -217,7 +207,7 @@ export function ReservationProvider({ initialReservation, children }) {
     const paid = useMemo(() => payments.reduce((sum, p) => sum + Number(p.amount || 0), 0), [payments]);
     const balance = useMemo(() => Math.max(0, total - paid), [total, paid]);
 
-    /* -------------------- Item handlers (CRUD) -------------------- */
+    /* ---------- Item handlers (CRUD into TWO TABLES) ---------- */
     const openAddService = () => { setItemMode('service'); setItemEditing(null); setItemModalOpen(true); };
     const openAddFood = () => { setItemMode('food'); setItemEditing(null); setItemModalOpen(true); };
     const openEditService = (it) => { setItemMode('service'); setItemEditing(it); setItemModalOpen(true); };
@@ -231,7 +221,7 @@ export function ReservationProvider({ initialReservation, children }) {
             amount: Number(itemForm.amount || 0),
         };
 
-        // Local fallback if no reservation id (shouldn't happen for real pages)
+        // Local fallback if no reservation id
         if (!initialReservation?.id) {
             const local = {
                 _id: itemForm._id || `${itemMode}-${(crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 9))}`,
@@ -248,24 +238,17 @@ export function ReservationProvider({ initialReservation, children }) {
             return;
         }
 
+        const table = itemMode === 'service' ? 'reservation_services' : 'reservation_foods';
         setItemsLoading(true);
         try {
             if (itemEditing?._id) {
-                // UPDATE
-                const { error } = await supabase
-                    .from('reservation_items')
-                    .update(rec)
-                    .eq('id', itemEditing._id);
+                const { error } = await supabase.from(table).update(rec).eq('id', itemEditing._id);
                 if (error) throw error;
             } else {
-                // INSERT
-                const { error } = await supabase
-                    .from('reservation_items')
-                    .insert({
-                        reservation_id: initialReservation.id,
-                        kind: itemMode, // 'service' | 'food'
-                        ...rec,
-                    });
+                const { error } = await supabase.from(table).insert({
+                    reservation_id: initialReservation.id,
+                    ...rec,
+                });
                 if (error) throw error;
             }
             await reloadItems();
@@ -282,7 +265,7 @@ export function ReservationProvider({ initialReservation, children }) {
         if (!initialReservation?.id) { setServices(prev => prev.filter(x => x._id !== id)); return; }
         setItemsLoading(true);
         try {
-            const { error } = await supabase.from('reservation_items').delete().eq('id', id);
+            const { error } = await supabase.from('reservation_services').delete().eq('id', id);
             if (error) throw error;
             setServices(prev => prev.filter(x => x._id !== id));
         } catch (e) {
@@ -296,7 +279,7 @@ export function ReservationProvider({ initialReservation, children }) {
         if (!initialReservation?.id) { setFoods(prev => prev.filter(x => x._id !== id)); return; }
         setItemsLoading(true);
         try {
-            const { error } = await supabase.from('reservation_items').delete().eq('id', id);
+            const { error } = await supabase.from('reservation_foods').delete().eq('id', id);
             if (error) throw error;
             setFoods(prev => prev.filter(x => x._id !== id));
         } catch (e) {
@@ -306,7 +289,7 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     };
 
-    /* -------------------- Payments (CRUD) -------------------- */
+    /* ---------- Payments (unchanged) ---------- */
     const openAddPayment = () => { setPaymentEditing(null); setPaymentModalOpen(true); };
     const openEditPayment = (p) => { setPaymentEditing(p); setPaymentModalOpen(true); };
 
@@ -332,9 +315,7 @@ export function ReservationProvider({ initialReservation, children }) {
                 const { error } = await supabase.from('payments').update(rec).eq('id', paymentEditing._id);
                 if (error) throw error;
             } else {
-                const { error } = await supabase
-                    .from('payments')
-                    .insert({ reservation_id: initialReservation.id, ...rec });
+                const { error } = await supabase.from('payments').insert({ reservation_id: initialReservation.id, ...rec });
                 if (error) throw error;
             }
             await reloadPayments();
@@ -361,7 +342,7 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     };
 
-    /* -------------------- Print (unchanged UI) -------------------- */
+    /* ---------- Print (unchanged UI) ---------- */
     const handlePrint = async () => {
         const { default: jsPDF } = await import('jspdf');
         const { default: autoTable } = await import('jspdf-autotable');
@@ -453,7 +434,6 @@ export function ReservationProvider({ initialReservation, children }) {
 
         y = (doc.lastAutoTable?.finalY ?? y) + 10;
 
-        // Totals
         autoTable(doc, {
             startY: y + 6,
             head: [['Label', 'Amount (LKR)']],
