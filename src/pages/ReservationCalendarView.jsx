@@ -1,129 +1,267 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
+import { supabase } from '../lib/supabse';
 
-// Generate sample data for 25 rooms
-const generateRoomData = () => {
-    const rooms = [];
-    const roomTypes = ['Standard', 'Deluxe', 'Suite', 'Premium', 'Executive'];
+/* ---------------------- helpers ---------------------- */
 
-    for (let i = 1; i <= 25; i++) {
-        rooms.push({
-            number: i.toString().padStart(3, '0'),
-            type: roomTypes[Math.floor(Math.random() * roomTypes.length)],
-            floor: Math.ceil(i / 10)
-        });
-    }
-    return rooms;
-};
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Generate sample reservations
-const generateReservations = () => {
-    const reservations = {};
-    const guests = ['Sarah Johnson', 'Michael Chen', 'Emma Wilson', 'James Rodriguez', 'Lisa Anderson', 'David Park', 'Sophie Martin', 'Robert Taylor'];
-    const currentDate = new Date(2025, 8, 15); // September 2025
+const ymd = (d) => dayjs(d).format('YYYY-MM-DD');
 
-    for (let day = 1; day <= 30; day++) {
-        const dateKey = `2025-09-${day.toString().padStart(2, '0')}`;
-        reservations[dateKey] = {};
-
-        // Randomly assign reservations (40-70% occupancy)
-        const occupancyRate = 0.1 + Math.random() * 0.1;
-        const reservedRooms = Math.floor(25 * occupancyRate);
-
-        const shuffledRooms = [...Array(25)].map((_, i) => (i + 1).toString().padStart(3, '0')).sort(() => Math.random() - 0.5);
-
-        for (let j = 0; j < reservedRooms; j++) {
-            const roomNumber = shuffledRooms[j];
-            reservations[dateKey][roomNumber] = {
-                guest: guests[Math.floor(Math.random() * guests.length)],
-                email: `guest${j + 1}@email.com`,
-                phone: `+1 234-567-89${day.toString().padStart(2, '0')}`,
-                checkIn: dateKey,
-                checkOut: `2025-09-${Math.min(day + Math.floor(Math.random() * 3) + 1, 30).toString().padStart(2, '0')}`,
-                status: ['confirmed', 'checked-in', 'pending'][Math.floor(Math.random() * 3)],
-                amount: `$${200 + Math.floor(Math.random() * 400)}`
-            };
-        }
-    }
-    return reservations;
-};
-
-const rooms = generateRoomData();
-const reservations = generateReservations();
-
-// Generate calendar days
 const generateCalendarDays = (year, month) => {
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
+    const first = dayjs().year(year).month(month).date(1);
+    const last = first.endOf('month');
+    const startPad = first.day(); // 0..6 (Sun..Sat)
     const days = [];
 
-    // Add empty cells for days before the first day of month
-    for (let i = 0; i < startingDayOfWeek; i++) {
-        days.push(null);
-    }
-
-    // Add days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-        days.push(day);
-    }
-
+    for (let i = 0; i < startPad; i++) days.push(null);
+    for (let d = 1; d <= last.date(); d++) days.push(d);
     return days;
 };
 
+// Build a range of date strings [start, end) (end exclusive)
+const eachDay = (start, end) => {
+    const out = [];
+    let cur = dayjs(start);
+    const endD = dayjs(end);
+    while (cur.isBefore(endD, 'day')) {
+        out.push(cur.format('YYYY-MM-DD'));
+        cur = cur.add(1, 'day');
+    }
+    return out;
+};
+
+/* ----------------- main component ----------------- */
+
 export default function ReservationCalendarView() {
-    const [currentDate, setCurrentDate] = useState(new Date(2025, 8)); // September 2025
-    const [selectedDate, setSelectedDate] = useState(null);
-    const [selectedRoomFilter, setSelectedRoomFilter] = useState('all');
-    const [viewMode, setViewMode] = useState('availability'); // 'availability' or 'occupancy'
-    const navigate = useNavigate()
+    const navigate = useNavigate();
+
+    // Default to today’s month & preselect today
+    const today = dayjs();
+    const [currentDate, setCurrentDate] = useState(today.toDate());
+    const [selectedDate, setSelectedDate] = useState(today.date());
+    const [viewMode, setViewMode] = useState('availability'); // 'availability' | 'occupancy'
+
+    // Data
+    const [rooms, setRooms] = useState([]);
+    const [resvCore, setResvCore] = useState([]); // reservations (id, check_in_date, check_out_date)
+    const [resvRooms, setResvRooms] = useState([]); // reservation_rooms (reservation_id, room_id, rooms(number,type))
+    const [resvGuests, setResvGuests] = useState([]); // reservation_guests (reservation_id, guests(name,email,phone))
+    const [loading, setLoading] = useState(false);
+
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-
     const calendarDays = generateCalendarDays(year, month);
-    const openReservation = (resv) => {
-        navigate('/dashboard/reservation/view', { state: { reservation: resv } });
+
+    /* ----------------- fetch month data from Supabase ----------------- */
+
+    const fetchMonth = async (year, month) => {
+        // Compute [start, end) window for the displayed month
+        const start = dayjs().year(year).month(month).date(1);
+        const end = start.add(1, 'month');
+
+        setLoading(true);
+        try {
+            // 1) rooms (for totals, types, numbers)
+            const { data: roomData, error: roomErr } = await supabase
+                .from('rooms')
+                .select('id, number, type, capacity, price')
+                .order('number', { ascending: true });
+            if (roomErr) throw roomErr;
+
+            // 2) reservations that overlap the month
+            // overlap condition: check_in < end AND start < check_out
+            const { data: resvData, error: resvErr } = await supabase
+                .from('reservations')
+                .select('id, check_in_date, check_out_date')
+                .lt('check_in_date', end.format('YYYY-MM-DD'))
+                .gt('check_out_date', start.format('YYYY-MM-DD'));
+            if (resvErr) throw resvErr;
+
+            const resvIds = (resvData || []).map(r => r.id);
+
+            // If no reservations, clear linked arrays and finish
+            if (resvIds.length === 0) {
+                setRooms(roomData || []);
+                setResvCore([]);
+                setResvRooms([]);
+                setResvGuests([]);
+                setLoading(false);
+                return;
+            }
+
+            // 3) reservation_rooms → include rooms(number, type) via FK
+            const { data: rrData, error: rrErr } = await supabase
+                .from('reservation_rooms')
+                .select('reservation_id, room_id, rooms(id, number, type)');
+            if (rrErr) throw rrErr;
+            const rrFiltered = rrData.filter(r => resvIds.includes(r.reservation_id));
+
+            // 4) reservation_guests → include guests(name,email,phone)
+            const { data: rgData, error: rgErr } = await supabase
+                .from('reservation_guests')
+                .select('reservation_id, guest_id, guests(id, name, email, phone)');
+            if (rgErr) throw rgErr;
+            const rgFiltered = rgData.filter(r => resvIds.includes(r.reservation_id));
+
+            setRooms(roomData || []);
+            setResvCore(resvData || []);
+            setResvRooms(rrFiltered || []);
+            setResvGuests(rgFiltered || []);
+        } catch (e) {
+            console.error(e);
+            // Fall back to empty state
+            setRooms([]);
+            setResvCore([]);
+            setResvRooms([]);
+            setResvGuests([]);
+        } finally {
+            setLoading(false);
+        }
     };
-    const navigateMonth = (direction) => {
-        setCurrentDate(new Date(year, month + direction));
+
+    // Load on mount + when month changes
+    useEffect(() => {
+        fetchMonth(year, month);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [year, month]);
+
+    // When clicking "Today", jump to today's month and select today
+    const goToday = () => {
+        const t = dayjs();
+        setCurrentDate(t.toDate());
+        setSelectedDate(t.date());
+    };
+
+    // Month navigate
+    const navigateMonth = (dir) => {
+        setCurrentDate(new Date(year, month + dir, 1));
         setSelectedDate(null);
     };
+
+    const openReservation = (resv) => {
+        console.log(resv);
+
+        navigate(`/dashboard/reservations/${resv.id}`, { state: { reservation: resv } });
+    };
+
     const handleNavigate = () => {
-        navigate('/dashboard/create-reservation')
-    }
+        navigate('/dashboard/create-reservation');
+    };
+
+    /* ----------------- build daily map for the month ----------------- */
+
+    // Map: dateStr -> { reservedRooms:Set<room_id>, items:[{roomNumber, guest, email, status, checkIn, checkOut}] }
+    const monthMap = useMemo(() => {
+        const map = new Map(); // dateStr -> { reservedRooms:Set, items:[] }
+        if (!rooms.length) return map;
+
+        const start = dayjs().year(year).month(month).date(1);
+        const end = start.add(1, 'month');
+        const dateKeys = eachDay(start, end);
+
+        dateKeys.forEach(d => map.set(d, { reservedRooms: new Set(), items: [] }));
+
+        // Build helpers
+        const rrByResv = resvRooms.reduce((acc, row) => {
+            (acc[row.reservation_id] ||= []).push(row);
+            return acc;
+        }, {});
+
+        const rgByResv = resvGuests.reduce((acc, row) => {
+            (acc[row.reservation_id] ||= []).push(row);
+            return acc;
+        }, {});
+
+        for (const r of resvCore) {
+            const rStart = dayjs(r.check_in_date);
+            const rEnd = dayjs(r.check_out_date); // exclusive
+            const overlapStart = rStart.isAfter(start) ? rStart : start;
+            const overlapEnd = rEnd.isBefore(end) ? rEnd : end;
+            if (!overlapStart.isBefore(overlapEnd)) continue;
+
+            // one primary guest for list
+            const gList = rgByResv[r.id] || [];
+            const primaryGuest = gList[0]?.guests || null;
+            const guestName = primaryGuest?.name || 'Guest';
+            const guestEmail = primaryGuest?.email || '';
+
+            // each room in reservation for each day in overlap
+            const roomLinks = rrByResv[r.id] || [];
+            const dayKeys = eachDay(overlapStart, overlapEnd);
+
+            for (const d of dayKeys) {
+                const bucket = map.get(d);
+                if (!bucket) continue;
+                for (const rl of roomLinks) {
+                    const roomNum = rl.rooms?.number ?? null;
+                    const roomId = rl.room_id;
+                    bucket.reservedRooms.add(roomId);
+                    bucket.items.push({
+                        id: r.id,
+                        room: roomNum || '—',
+                        guest: guestName,
+                        email: guestEmail,
+                        checkIn: ymd(r.check_in_date),
+                        checkOut: ymd(r.check_out_date),
+                        status: 'confirmed', // default (schema in last answer didn’t include status)
+                    });
+                }
+            }
+        }
+
+        return map;
+    }, [rooms, resvCore, resvRooms, resvGuests, year, month]);
+
+    const totalRooms = rooms.length || 0;
+
     const getDateReservations = (day) => {
-        if (!day) return {};
-        const dateKey = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        return reservations[dateKey] || {};
+        if (!day) return [];
+        const key = dayjs().year(year).month(month).date(day).format('YYYY-MM-DD');
+        const bucket = monthMap.get(key);
+        if (!bucket) return [];
+        // Sort by room number ascending
+        return bucket.items.sort((a, b) => String(a.room).localeCompare(String(b.room)));
     };
 
     const getRoomAvailability = (day) => {
-        if (!day) return { available: 0, reserved: 0, rate: 0 };
-        const dayReservations = getDateReservations(day);
-        const reserved = Object.keys(dayReservations).length;
-        const available = 25 - reserved;
-        const rate = (reserved / 25) * 100;
+        if (!day || totalRooms === 0) return { available: 0, reserved: 0, rate: 0 };
+        const key = dayjs().year(year).month(month).date(day).format('YYYY-MM-DD');
+        const bucket = monthMap.get(key);
+        const reserved = bucket ? bucket.reservedRooms.size : 0;
+        const available = Math.max(0, totalRooms - reserved);
+        const rate = totalRooms > 0 ? (reserved / totalRooms) * 100 : 0;
         return { available, reserved, rate };
     };
 
-    const getSelectedDateReservations = () => {
-        if (!selectedDate) return [];
-        const dayReservations = getDateReservations(selectedDate);
-        return Object.entries(dayReservations).map(([room, details]) => ({
-            room,
-            ...details
-        }));
-    };
+    // Month quick stats
+    const monthStats = useMemo(() => {
+        const start = dayjs().year(year).month(month).date(1);
+        const end = start.endOf('month').date();
+        if (totalRooms === 0) return { avgOcc: 0, peakDay: null, lowDay: null };
 
-    const filteredRooms = selectedRoomFilter === 'all'
-        ? rooms
-        : rooms.filter(room => room.type === selectedRoomFilter);
+        let sumPct = 0;
+        let peak = { day: null, rate: -1 };
+        let low = { day: null, rate: 101 };
+
+        for (let d = 1; d <= end; d++) {
+            const { rate } = getRoomAvailability(d);
+            sumPct += rate;
+            if (rate > peak.rate) peak = { day: d, rate };
+            if (rate < low.rate) low = { day: d, rate };
+        }
+
+        const avgOcc = end > 0 ? Math.round((sumPct / end)) : 0;
+        const peakDay = peak.day ? `${monthNames[month].slice(0, 3)} ${peak.day}` : '—';
+        const lowDay = low.day ? `${monthNames[month].slice(0, 3)} ${low.day}` : '—';
+
+        return { avgOcc, peakDay, lowDay };
+    }, [monthMap, totalRooms, year, month]);
+
+    /* ----------------- UI ----------------- */
 
     return (
         <main className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20">
@@ -177,23 +315,34 @@ export default function ReservationCalendarView() {
                                     <button
                                         onClick={() => navigateMonth(-1)}
                                         className="p-2 rounded-lg bg-slate-100/70 hover:bg-slate-200/70 transition-colors"
+                                        disabled={loading}
                                     >
                                         <Icon icon="lucide:chevron-left" width="20" height="20" className="text-slate-600" />
                                     </button>
                                     <button
-                                        onClick={() => setCurrentDate(new Date())}
+                                        onClick={goToday}
                                         className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                                        disabled={loading}
                                     >
                                         Today
                                     </button>
                                     <button
                                         onClick={() => navigateMonth(1)}
                                         className="p-2 rounded-lg bg-slate-100/70 hover:bg-slate-200/70 transition-colors"
+                                        disabled={loading}
                                     >
                                         <Icon icon="lucide:chevron-right" width="20" height="20" className="text-slate-600" />
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Subtle month loading */}
+                            {loading && (
+                                <div className="mb-3 text-sm text-slate-500 flex items-center gap-2">
+                                    <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" />
+                                    Loading month…
+                                </div>
+                            )}
 
                             {/* Calendar Grid */}
                             <div className="grid grid-cols-7 gap-1 mb-2">
@@ -204,43 +353,54 @@ export default function ReservationCalendarView() {
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-7 gap-1 ">
+                            <div className="grid grid-cols-7 gap-1">
                                 {calendarDays.map((day, index) => {
                                     if (!day) {
-                                        return <div key={index} className="aspect-square"></div>;
+                                        return <div key={`pad-${index}`} className="aspect-square" />;
                                     }
 
                                     const availability = getRoomAvailability(day);
                                     const isSelected = selectedDate === day;
-                                    const isToday = day === new Date().getDate() &&
-                                        month === new Date().getMonth() &&
-                                        year === new Date().getFullYear();
+                                    const isToday =
+                                        day === today.date() &&
+                                        month === today.month() &&
+                                        year === today.year();
 
                                     return (
                                         <div
                                             key={day}
-                                            onClick={() => setSelectedDate(day)}
-                                            className={`aspect-square p-2 rounded-lg cursor-pointer transition-all duration-200 border-2   ${isSelected
-                                                ? 'border-slate-900 bg-slate-900 text-white'
-                                                : isToday
-                                                    ? 'border-emerald-500 bg-emerald-50'
-                                                    : 'border-gray-100 hover:bg-slate-50'
-                                                }`}
+                                            onClick={() => !loading && setSelectedDate(day)}
+                                            className={`aspect-square p-2 rounded-lg cursor-pointer transition-all duration-200 border-2
+                        ${isSelected
+                                                    ? 'border-slate-900 bg-slate-900 text-white'
+                                                    : isToday
+                                                        ? 'border-emerald-500 bg-emerald-50'
+                                                        : 'border-gray-100 hover:bg-slate-50'}
+                        ${loading ? 'opacity-60 pointer-events-none' : ''}`}
                                         >
                                             <div className="h-full flex flex-col justify-between">
-                                                <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-800'
-                                                    }`}>
+                                                <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-800'}`}>
                                                     {day}
                                                 </span>
 
                                                 {viewMode === 'availability' ? (
                                                     <div className="text-xs">
-                                                        <div className={`${isSelected ? 'text-emerald-200' : 'text-emerald-600'} font-medium`}>
-                                                            {availability.available} free
-                                                        </div>
-                                                        <div className={`${isSelected ? 'text-red-200' : 'text-red-600'}`}>
-                                                            {availability.reserved} booked
-                                                        </div>
+                                                        {/* skeleton shimmer for counts while loading */}
+                                                        {loading ? (
+                                                            <div className="animate-pulse space-y-1">
+                                                                <div className="h-3 bg-slate-200 rounded" />
+                                                                <div className="h-3 bg-slate-200 rounded w-3/4" />
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div className={`${isSelected ? 'text-emerald-200' : 'text-emerald-600'} font-medium`}>
+                                                                    {availability.available} free
+                                                                </div>
+                                                                <div className={`${isSelected ? 'text-red-200' : 'text-red-600'}`}>
+                                                                    {availability.reserved} booked
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-end justify-center">
@@ -249,12 +409,12 @@ export default function ReservationCalendarView() {
                                                                 availability.rate >= 60 ? 'bg-amber-400' :
                                                                     availability.rate >= 40 ? 'bg-blue-400' :
                                                                         'bg-emerald-400'
-                                                                }`}
+                                                                } ${loading ? 'animate-pulse' : ''}`}
                                                             style={{
                                                                 height: `${Math.max(availability.rate * 0.6, 8)}px`,
                                                                 opacity: isSelected ? 0.7 : 1
                                                             }}
-                                                        ></div>
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
@@ -268,19 +428,19 @@ export default function ReservationCalendarView() {
                                 {viewMode === 'occupancy' && (
                                     <div className="flex items-center gap-6 text-xs">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-emerald-400 rounded"></div>
+                                            <div className="w-4 h-4 bg-emerald-400 rounded" />
                                             <span className="text-slate-600">Low (0-40%)</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-blue-400 rounded"></div>
+                                            <div className="w-4 h-4 bg-blue-400 rounded" />
                                             <span className="text-slate-600">Medium (40-60%)</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-amber-400 rounded"></div>
+                                            <div className="w-4 h-4 bg-amber-400 rounded" />
                                             <span className="text-slate-600">High (60-80%)</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-red-400 rounded"></div>
+                                            <div className="w-4 h-4 bg-red-400 rounded" />
                                             <span className="text-slate-600">Full (80%+)</span>
                                         </div>
                                     </div>
@@ -294,7 +454,7 @@ export default function ReservationCalendarView() {
                         {/* Selected Day Info */}
                         {selectedDate ? (
                             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
-                                <div className="flex  items-center justify-between mb-4">
+                                <div className="flex items-center justify-between mb-4">
                                     <h4 className="text-lg font-semibold text-slate-800">
                                         {monthNames[month]} {selectedDate}, {year}
                                     </h4>
@@ -320,35 +480,52 @@ export default function ReservationCalendarView() {
 
                                 {/* Reservations List */}
                                 <div>
-                                    <h5 className="font-medium text-slate-800 mb-3">Reservations ({getRoomAvailability(selectedDate).reserved})</h5>
-                                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                                        {getSelectedDateReservations().map(reservation => (
-                                            <button
-                                                key={reservation.room}
-                                                onClick={() => openReservation({
-                                                    ...reservation,
-                                                    date: `${year}-${(month + 1).toString().padStart(2, '0')}-${selectedDate.toString().padStart(2, '0')}`
-                                                })}
-                                                className="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                                            >
-                                                <div className="flex items-start justify-between mb-1">
-                                                    <span className="font-medium text-slate-800">Room {reservation.room}</span>
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${reservation.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                                                        reservation.status === 'checked-in' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-amber-100 text-amber-700'
-                                                        }`}>
-                                                        {reservation.status}
-                                                    </span>
+                                    <h5 className="font-medium text-slate-800 mb-3">
+                                        Reservations ({getRoomAvailability(selectedDate).reserved})
+                                    </h5>
+                                    <div className={`space-y-2 max-h-64 overflow-y-auto ${loading ? 'animate-pulse' : ''}`}>
+                                        {loading ? (
+                                            // Sidebar skeleton (smoother loading)
+                                            Array.from({ length: 4 }).map((_, i) => (
+                                                <div key={i} className="w-full p-3 bg-slate-50/50 rounded-lg border border-slate-100">
+                                                    <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
+                                                    <div className="h-3 bg-slate-200 rounded w-1/2" />
                                                 </div>
-                                                <div className="text-sm text-slate-600">
-                                                    <div>{reservation.guest}</div>
-                                                    <div className="text-xs mt-1">{reservation.email}</div>
-                                                </div>
-                                            </button>
-                                        ))}
-
-                                        {getRoomAvailability(selectedDate).reserved === 0 && (
-                                            <p className="text-sm text-slate-500 text-center py-4">No reservations for this day</p>
+                                            ))
+                                        ) : (
+                                            <>
+                                                {getDateReservations(selectedDate).map((reservation, idx) => (
+                                                    <button
+                                                        key={`${reservation.room}-${idx}`}
+                                                        onClick={() =>
+                                                            openReservation({
+                                                                ...reservation,
+                                                                date: dayjs().year(year).month(month).date(selectedDate).format('YYYY-MM-DD')
+                                                            })
+                                                        }
+                                                        className="w-full text-left p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                                                    >
+                                                        <div className="flex items-start justify-between mb-1">
+                                                            <span className="font-medium text-slate-800">Room {reservation.room}</span>
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${reservation.status === 'confirmed'
+                                                                ? 'bg-emerald-100 text-emerald-700'
+                                                                : reservation.status === 'checked-in'
+                                                                    ? 'bg-blue-100 text-blue-700'
+                                                                    : 'bg-amber-100 text-amber-700'
+                                                                }`}>
+                                                                {reservation.status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm text-slate-600">
+                                                            <div>{reservation.guest}</div>
+                                                            {reservation.email && <div className="text-xs mt-1">{reservation.email}</div>}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                                {getRoomAvailability(selectedDate).reserved === 0 && (
+                                                    <p className="text-sm text-slate-500 text-center py-4">No reservations for this day</p>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -366,22 +543,24 @@ export default function ReservationCalendarView() {
                         {/* Quick Stats */}
                         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
                             <h4 className="text-lg font-semibold text-slate-800 mb-4">Month Overview</h4>
-                            <div className="space-y-4">
+                            <div className={`space-y-4 ${loading ? 'animate-pulse' : ''}`}>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-600">Average Occupancy</span>
-                                    <span className="font-medium text-slate-800">68%</span>
+                                    <span className="font-medium text-slate-800">
+                                        {loading ? '—' : `${monthStats.avgOcc}%`}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-600">Total Rooms</span>
-                                    <span className="font-medium text-slate-800">25</span>
+                                    <span className="font-medium text-slate-800">{loading ? '—' : totalRooms}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-600">Peak Day</span>
-                                    <span className="font-medium text-slate-800">Sep 22</span>
+                                    <span className="font-medium text-slate-800">{loading ? '—' : monthStats.peakDay}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-600">Lowest Day</span>
-                                    <span className="font-medium text-slate-800">Sep 3</span>
+                                    <span className="font-medium text-slate-800">{loading ? '—' : monthStats.lowDay}</span>
                                 </div>
                             </div>
                         </div>

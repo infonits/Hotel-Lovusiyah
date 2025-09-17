@@ -130,7 +130,7 @@ export default function HotelDashboard() {
                     </div>
 
                 </div>
-                <div className="px-6 border-t border-slate-200/60 pt-2">
+                <div className="px-6 border-t border-slate-200/60 py-2">
                     <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-3 text-white">
                         <p className="text-xs text-emerald-100 mb-3">Infonits Product</p>
                     </div>
@@ -152,7 +152,7 @@ export default function HotelDashboard() {
                         <Route path="housekeeping" element={<Services />} />
                         <Route path="analytics" element={<Reports />} />
                         <Route path="expenses" element={<Expenses />} />
-                        <Route path="reservation/view" element={<ReservationView />} />
+                        <Route path="reservations/:id" element={<ReservationView />} />
                         <Route path="create-reservation" element={<CreateReservation />} />
                     </Routes>
                 </div>

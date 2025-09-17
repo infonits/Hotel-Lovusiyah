@@ -1,21 +1,14 @@
 // Hotel Menus Page Component — simplified (no spicy, status, veg options)
+// Supabase CRUD wired with same UI
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
+import { supabase } from '../lib/supabse';
 
 const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Beverages', 'Snacks', 'Desserts'];
 
-const initialMenus = [
-    { id: 'MNU001', name: 'Idli Set', category: 'Breakfast', price: 350, description: '3 pcs with sambar & chutney' },
-    { id: 'MNU002', name: 'Chicken Fried Rice', category: 'Lunch', price: 950, description: 'Wok-tossed rice with chicken & veggies' },
-    { id: 'MNU003', name: 'Veg Kottu', category: 'Dinner', price: 800, description: 'Chopped roti with mixed veg & gravy' },
-    { id: 'MNU004', name: 'Iced Coffee', category: 'Beverages', price: 450, description: 'Chilled coffee with milk' },
-    { id: 'MNU005', name: 'Fish Curry Meal', category: 'Lunch', price: 1100, description: 'Rice, fish curry, 2 sides, papad' },
-    { id: 'MNU006', name: 'Chocolate Brownie', category: 'Desserts', price: 500, description: 'Warm brownie slice' },
-];
-
 export default function MenusPage() {
-    const [menus, setMenus] = useState(initialMenus);
+    const [menus, setMenus] = useState([]);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -29,11 +22,47 @@ export default function MenusPage() {
         description: '',
     });
 
+    const [editingId, setEditingId] = useState(null); // null = creating, string = editing
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    // ---- Load from Supabase ----
+    const fetchMenus = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const { data, error: err } = await supabase
+                .from('menus')
+                .select('id, name, category, price, description, created_at')
+                .order('created_at', { ascending: false });
+
+            if (err) throw err;
+            setMenus(data || []);
+        } catch (e) {
+            setError(e.message || 'Failed to load menu items');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchMenus();
+    }, []);
+
+    // ---- Helpers ----
+    const nextId = () => {
+        const maxNum = menus.reduce((acc, m) => {
+            const n = Number(String(m.id || '').replace('MNU', '')) || 0;
+            return Math.max(acc, n);
+        }, 0);
+        return `MNU${String(maxNum + 1).padStart(3, '0')}`;
+    };
+
     const filtered = useMemo(() => {
         return menus.filter(m => {
             const matchesSearch =
                 !search ||
-                m.name.toLowerCase().includes(search.toLowerCase()) ||
+                m.name?.toLowerCase().includes(search.toLowerCase()) ||
                 m.description?.toLowerCase().includes(search.toLowerCase());
             const matchesCategory = categoryFilter === 'all' || m.category === categoryFilter;
             return matchesSearch && matchesCategory;
@@ -43,37 +72,79 @@ export default function MenusPage() {
     const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
     const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-    const nextId = () => {
-        const maxNum = menus.reduce((acc, m) => {
-            const n = Number(m.id.replace('MNU', '')) || 0;
-            return Math.max(acc, n);
-        }, 0);
-        return `MNU${String(maxNum + 1).padStart(3, '0')}`;
-    };
-
-    const handleAdd = () => {
+    // ---- Create / Update (reuses same modal) ----
+    const handleSave = async () => {
         const priceNum = parseFloat(String(newItem.price));
         if (!newItem.name.trim() || isNaN(priceNum) || priceNum < 0) return;
-        const item = {
-            id: nextId(),
-            name: newItem.name.trim(),
-            category: newItem.category,
-            price: priceNum,
-            description: newItem.description?.trim() || '',
-        };
-        setMenus(prev => [item, ...prev]);
-        setShowAddForm(false);
-        setNewItem({ name: '', category: 'Breakfast', price: '', description: '' });
-        setCurrentPage(1);
+
+        setError('');
+        try {
+            if (editingId) {
+                // UPDATE
+                const { error: err } = await supabase
+                    .from('menus')
+                    .update({
+                        name: newItem.name.trim(),
+                        category: newItem.category,
+                        price: priceNum,
+                        description: newItem.description?.trim() || '',
+                    })
+                    .eq('id', editingId);
+                if (err) throw err;
+            } else {
+                // INSERT
+                const itemId = nextId();
+                const { error: err } = await supabase.from('menus').insert({
+                    id: itemId,
+                    name: newItem.name.trim(),
+                    category: newItem.category,
+                    price: priceNum,
+                    description: newItem.description?.trim() || '',
+                });
+                if (err) throw err;
+            }
+
+            await fetchMenus();
+            setShowAddForm(false);
+            setNewItem({ name: '', category: 'Breakfast', price: '', description: '' });
+            setEditingId(null);
+            setCurrentPage(1);
+        } catch (e) {
+            setError(e.message || 'Save failed');
+        }
     };
 
-    const handleDelete = (id) => {
-        setMenus(prev => prev.filter(m => m.id !== id));
+    // ---- Edit open ----
+    const openEdit = (item) => {
+        setEditingId(item.id);
+        setNewItem({
+            name: item.name || '',
+            category: item.category || 'Breakfast',
+            price: String(item.price ?? ''),
+            description: item.description || '',
+        });
+        setShowAddForm(true);
+    };
+
+    // ---- Delete ----
+    const handleDelete = async (id) => {
+        if (!window.confirm('Delete this item?')) return;
+        setError('');
+        try {
+            const { error: err } = await supabase.from('menus').delete().eq('id', id);
+            if (err) throw err;
+            await fetchMenus();
+            if ((currentPage - 1) * itemsPerPage >= filtered.length - 1 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
+        } catch (e) {
+            setError(e.message || 'Delete failed');
+        }
     };
 
     return (
         <div className="flex-1 p-8 overflow-y-auto">
-            {/* Filters & Add */}
+            {/* Filters & Add (kept same) */}
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
                 <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                     <div className="flex flex-col xl:flex-row gap-4 w-full">
@@ -103,21 +174,23 @@ export default function MenusPage() {
                     </div>
 
                     <button
-                        onClick={() => setShowAddForm(true)}
+                        onClick={() => { setShowAddForm(true); setEditingId(null); setNewItem({ name: '', category: 'Breakfast', price: '', description: '' }); }}
                         className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                     >
                         <Icon icon="lucide:plus" className="w-4 h-4" /> Add Menu Item
                     </button>
                 </div>
+
+                {loading && <div className="mt-3 text-sm text-slate-600">Loading…</div>}
+                {error && <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</div>}
             </div>
 
-            {/* Table */}
+            {/* Table (kept same) */}
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-slate-50/50">
                             <tr>
-                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">ID</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Item</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Category</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Price (LKR)</th>
@@ -127,7 +200,6 @@ export default function MenusPage() {
                         <tbody>
                             {paginated.map(item => (
                                 <tr key={item.id} className="border-t border-slate-200/50 hover:bg-slate-50/30">
-                                    <td className="px-6 py-4 font-medium text-slate-800">{item.id}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="text-slate-800">{item.name}</span>
@@ -137,10 +209,14 @@ export default function MenusPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{item.category}</td>
-                                    <td className="px-6 py-4 text-slate-700">{item.price.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-slate-700">{Number(item.price || 0).toLocaleString()}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex gap-2">
-                                            <button className="p-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600" title="Edit (todo)">
+                                            <button
+                                                onClick={() => openEdit(item)}
+                                                className="p-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600"
+                                                title="Edit"
+                                            >
                                                 <Icon icon="lucide:edit" width="16" height="16" />
                                             </button>
                                             <button
@@ -165,11 +241,11 @@ export default function MenusPage() {
                     </table>
                 </div>
 
-                {/* Pagination */}
+                {/* Pagination (kept same) */}
                 <div className="px-6 py-4 border-t border-slate-200/50 bg-slate-50/30">
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-slate-600">
-                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} results
+                            Showing {(currentPage - 1) * itemsPerPage + (filtered.length ? 1 : 0)} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} results
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -203,13 +279,15 @@ export default function MenusPage() {
                 </div>
             </div>
 
-            {/* Add Menu Item Modal */}
+            {/* Add/Edit Modal (kept same UI; button text changes) */}
             {showAddForm && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-xl w-full max-w-2xl">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-slate-800">Add Menu Item</h2>
-                            <button onClick={() => setShowAddForm(false)} className="text-slate-500 hover:text-slate-700">
+                            <h2 className="text-lg font-semibold text-slate-800">
+                                {editingId ? 'Edit Menu Item' : 'Add Menu Item'}
+                            </h2>
+                            <button onClick={() => { setShowAddForm(false); setEditingId(null); }} className="text-slate-500 hover:text-slate-700">
                                 <Icon icon="lucide:x" width="20" height="20" />
                             </button>
                         </div>
@@ -263,9 +341,15 @@ export default function MenusPage() {
                         </div>
 
                         <div className="flex justify-end gap-2 mt-6">
-                            <button onClick={() => setShowAddForm(false)} className="px-4 py-2 text-slate-600 hover:text-slate-900">Cancel</button>
-                            <button onClick={handleAdd} className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800">Add Item</button>
+                            <button onClick={() => { setShowAddForm(false); setEditingId(null); }} className="px-4 py-2 text-slate-600 hover:text-slate-900">Cancel</button>
+                            <button onClick={handleSave} className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800">
+                                {editingId ? 'Save' : 'Add Item'}
+                            </button>
                         </div>
+
+                        {error && (
+                            <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</div>
+                        )}
                     </div>
                 </div>
             )}

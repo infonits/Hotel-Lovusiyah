@@ -1,161 +1,23 @@
-import React, { useState } from 'react';
-import { Icon } from '@iconify/react';
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabse";
+import { Icon } from "@iconify/react/dist/iconify.js";
+import GuestDetailsModal from "../components/GuestDetailsModal";
 
-const guestsData = [
-    {
-        id: 'GST001',
-        name: 'Sarah Johnson',
-        email: 'sarah.johnson@email.com',
-        phone: '+94 77 123 4567',
-        nic: '199245601234',
-        passport: '',
-        address: '45 Palm Street',
-        city: 'Colombo',
-        country: 'Sri Lanka',
-        nationality: 'Sri Lankan',
-        dob: '1992-04-15',
-
-        notes: 'Prefers high-floor rooms',
-        createdAt: '2025-09-10',
-    },
-    {
-        id: 'GST002',
-        name: 'Michael Chen',
-        email: 'michael.chen@email.com',
-        phone: '+65 9876 5432',
-        nic: '',
-        passport: 'A1234567',
-        address: '21 Riverside Ave',
-        city: 'Singapore',
-        country: 'Singapore',
-        nationality: 'Singaporean',
-        dob: '1988-12-02',
-        notes: '',
-        createdAt: '2025-09-11',
-    },
-    {
-        id: 'GST003',
-        name: 'Emma Wilson',
-        email: 'emma.wilson@email.com',
-        phone: '+44 7700 900123',
-        nic: '',
-        passport: 'B9876543',
-        address: '12 King’s Road',
-        city: 'London',
-        country: 'United Kingdom',
-        nationality: 'British',
-        dob: '1995-06-30',
-        notes: '',
-        createdAt: '2025-09-12',
-    },
-    {
-        id: 'GST004',
-        name: 'James Rodriguez',
-        email: 'james.rodriguez@email.com',
-        phone: '+57 310 555 1122',
-        nic: '',
-        passport: 'X12398745',
-        address: 'Calle 89 #12',
-        city: 'Bogotá',
-        country: 'Colombia',
-        nationality: 'Colombian',
-        dob: '',
-        notes: '',
-        createdAt: '2025-09-13',
-    },
-    {
-        id: 'GST005',
-        name: 'Lisa Anderson',
-        email: 'lisa.anderson@email.com',
-        phone: '+1 415 222 7890',
-        nic: '',
-        passport: 'C77889900',
-        address: '900 Market St',
-        city: 'San Francisco',
-        country: 'USA',
-        nationality: 'American',
-        dob: '',
-        notes: 'Chargeback history',
-        createdAt: '2025-09-14',
-    },
-    {
-        id: 'GST006',
-        name: 'David Park',
-        email: 'david.park@email.com',
-        phone: '+82 10 9999 0000',
-        nic: '',
-        passport: 'K11223344',
-        address: '88 Teheran-ro',
-        city: 'Seoul',
-        country: 'South Korea',
-        nationality: 'Korean',
-        dob: '',
-        notes: '',
-        createdAt: '2025-09-14',
-    },
-    {
-        id: 'GST007',
-        name: 'Sophie Martin',
-        email: 'sophie.martin@email.com',
-        phone: '+33 6 22 33 44 55',
-        nic: '',
-        passport: 'FR55667788',
-        address: '3 Rue de Rivoli',
-        city: 'Paris',
-        country: 'France',
-        nationality: 'French',
-        dob: '',
-        notes: '',
-        createdAt: '2025-09-15',
-    },
-    {
-        id: 'GST008',
-        name: 'Robert Taylor',
-        email: 'robert.taylor@email.com',
-        phone: '+61 400 555 777',
-        nic: '',
-        passport: 'AU33445566',
-        address: '200 George St',
-        city: 'Sydney',
-        country: 'Australia',
-        nationality: 'Australian',
-        dob: '',
-        notes: '',
-        createdAt: '2025-09-15',
-    },
-];
 
 export default function Guests() {
     const [searchTerm, setSearchTerm] = useState('');
     const [countryFilter, setCountryFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [showNewGuest, setShowNewGuest] = useState(false);
-    const [guests, setGuests] = useState(guestsData);
+    const [guests, setGuests] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [editingId, setEditingId] = useState(null); // uuid when editing, else null
+    const [viewGuest, setViewGuest] = useState(null); // for details modal
 
     const itemsPerPage = 5;
 
-    const countries = ['all', ...Array.from(new Set(guests.map(g => g.country).filter(Boolean)))];
-
-    // Filter
-    const filteredData = guests.filter(g => {
-        const t = searchTerm.toLowerCase();
-        const matchesSearch =
-            g.name.toLowerCase().includes(t) ||
-            g.id.toLowerCase().includes(t) ||
-            (g.nic || '').toLowerCase().includes(t) ||
-            (g.passport || '').toLowerCase().includes(t) ||
-            (g.email || '').toLowerCase().includes(t) ||
-            (g.phone || '').toLowerCase().includes(t);
-        const matchesCountry = countryFilter === 'all' || g.country === countryFilter;
-        return matchesSearch && matchesCountry;
-    });
-
-    // Pagination
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
-
-    // Create new guest
+    // Create/Edit form
     const [form, setForm] = useState({
         name: '',
         nic: '',
@@ -170,26 +32,64 @@ export default function Guests() {
         notes: '',
     });
 
-    const handleCreateGuest = () => {
-        if (!form.name.trim() || (!form.nic.trim() && !form.passport.trim()) || !form.address.trim()) return;
-        const id = 'GST' + Math.floor(Math.random() * 900 + 100).toString().padStart(3, '0');
-        const newGuest = {
-            id,
-            name: form.name.trim(),
-            email: form.email.trim(),
-            phone: form.phone.trim(),
-            nic: form.nic.trim(),
-            passport: form.passport.trim(),
-            address: form.address.trim(),
-            city: form.city.trim(),
-            country: form.country.trim(),
-            nationality: form.nationality.trim(),
-            dob: form.dob,
-            notes: form.notes.trim(),
-            createdAt: new Date().toISOString().slice(0, 10),
-        };
-        setGuests([newGuest, ...guests]);
-        setShowNewGuest(false);
+    // Load all guests
+    const fetchGuests = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const { data, error: err } = await supabase
+                .from('guests')
+                .select('id, name, email, phone, nic, passport, address, city, country, nationality, dob, notes, created_at')
+                .order('created_at', { ascending: false });
+
+            if (err) throw err;
+
+            const mapped = (data || []).map((g) => ({
+                ...g,
+                createdAt: g.created_at ? g.created_at.slice(0, 10) : '',
+            }));
+            setGuests(mapped);
+        } catch (e) {
+            setError(e.message || 'Failed to load guests');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchGuests();
+    }, []);
+
+    // Countries list
+    const countries = useMemo(
+        () => ['all', ...Array.from(new Set(guests.map(g => g.country).filter(Boolean)))],
+        [guests]
+    );
+
+    // Filter
+    const filteredData = useMemo(() => {
+        const t = searchTerm.toLowerCase();
+        return guests.filter(g => {
+            const matchesSearch =
+                (g.name || '').toLowerCase().includes(t) ||
+                (g.id || '').toLowerCase().includes(t) ||
+                (g.nic || '').toLowerCase().includes(t) ||
+                (g.passport || '').toLowerCase().includes(t) ||
+                (g.email || '').toLowerCase().includes(t) ||
+                (g.phone || '').toLowerCase().includes(t);
+            const matchesCountry = countryFilter === 'all' || g.country === countryFilter;
+            return matchesSearch && matchesCountry;
+        });
+    }, [guests, searchTerm, countryFilter]);
+
+    // Pagination
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+    // Open Create modal
+    const openCreate = () => {
+        setEditingId(null);
         setForm({
             name: '',
             nic: '',
@@ -203,7 +103,80 @@ export default function Guests() {
             dob: '',
             notes: '',
         });
-        setCurrentPage(1);
+        setShowNewGuest(true);
+    };
+
+    // Open Edit modal
+    const openEdit = (g) => {
+        setEditingId(g.id);
+        setForm({
+            name: g.name || '',
+            nic: g.nic || '',
+            passport: g.passport || '',
+            phone: g.phone || '',
+            email: g.email || '',
+            address: g.address || '',
+            city: g.city || '',
+            country: g.country || 'Sri Lanka',
+            nationality: g.nationality || '',
+            dob: g.dob || '',
+            notes: g.notes || '',
+        });
+        setShowNewGuest(true);
+    };
+
+    // Create/Update
+    const handleSaveGuest = async () => {
+        // Same validation you had
+        if (!form.name.trim() || (!form.nic.trim() && !form.passport.trim()) || !form.address.trim()) return;
+
+        const payload = {
+            name: form.name.trim(),
+            email: form.email.trim() || null,
+            phone: form.phone.trim() || null,
+            nic: form.nic.trim() || null,
+            passport: form.passport.trim() || null,
+            address: form.address.trim(),
+            city: form.city.trim() || null,
+            country: form.country.trim() || null,
+            nationality: form.nationality.trim() || null,
+            dob: form.dob || null,
+            notes: form.notes.trim() || null,
+        };
+
+        setError('');
+        try {
+            if (editingId) {
+                const { error: err } = await supabase.from('guests').update(payload).eq('id', editingId);
+                if (err) throw err;
+            } else {
+                // ID is UUID generated by DB
+                const { error: err } = await supabase.from('guests').insert(payload);
+                if (err) throw err;
+            }
+            await fetchGuests();
+            setShowNewGuest(false);
+            setEditingId(null);
+            setCurrentPage(1);
+        } catch (e) {
+            setError(e.message || 'Save failed');
+        }
+    };
+
+    // Delete
+    const handleDelete = async (g) => {
+        if (!window.confirm(`Delete guest "${g.name}"?`)) return;
+        setError('');
+        try {
+            const { error: err } = await supabase.from('guests').delete().eq('id', g.id);
+            if (err) throw err;
+            await fetchGuests();
+            if ((currentPage - 1) * itemsPerPage >= filteredData.length - 1 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
+        } catch (e) {
+            setError(e.message || 'Delete failed');
+        }
     };
 
     return (
@@ -227,8 +200,6 @@ export default function Guests() {
                                 />
                             </div>
 
-
-
                             <select
                                 value={countryFilter}
                                 onChange={(e) => {
@@ -245,17 +216,19 @@ export default function Guests() {
 
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setShowNewGuest(true)}
+                                onClick={openCreate}
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors"
                             >
                                 <Icon icon="lucide:user-plus" width="18" height="18" />
                                 New Guest
                             </button>
                             <div className="text-sm text-slate-600">
-                                <span>Showing {paginatedData.length} of {filteredData.length} guests</span>
+                                <span>{loading ? 'Loading…' : `Showing ${paginatedData.length} of ${filteredData.length} guests`}</span>
                             </div>
                         </div>
                     </div>
+
+                    {error && <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</div>}
                 </div>
 
                 {/* Table */}
@@ -273,7 +246,6 @@ export default function Guests() {
                             <tbody>
                                 {paginatedData.map((g) => (
                                     <tr key={g.id} className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors">
-
                                         <td className="px-6 py-4">
                                             <div>
                                                 <p className="font-medium text-slate-800">{g.name}</p>
@@ -293,17 +265,27 @@ export default function Guests() {
                                                 {g.email && <p className="text-sm text-slate-600">{g.email}</p>}
                                             </div>
                                         </td>
-
-
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <button className="p-2 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-600 transition-colors">
+                                                <button
+                                                    onClick={() => setViewGuest(g)}
+                                                    className="p-2 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-600 transition-colors"
+                                                    title="View"
+                                                >
                                                     <Icon icon="lucide:eye" width="16" height="16" />
                                                 </button>
-                                                <button className="p-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 transition-colors">
+                                                <button
+                                                    onClick={() => openEdit(g)}
+                                                    className="p-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 transition-colors"
+                                                    title="Edit"
+                                                >
                                                     <Icon icon="lucide:edit" width="16" height="16" />
                                                 </button>
-                                                <button className="p-2 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 transition-colors">
+                                                <button
+                                                    onClick={() => handleDelete(g)}
+                                                    className="p-2 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 transition-colors"
+                                                    title="Delete"
+                                                >
                                                     <Icon icon="lucide:trash-2" width="16" height="16" />
                                                 </button>
                                             </div>
@@ -362,15 +344,15 @@ export default function Guests() {
                 </div>
             </div>
 
-            {/* New Guest Modal */}
+            {/* Create/Edit Modal (same design, reused) */}
             {showNewGuest && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowNewGuest(false)} />
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setShowNewGuest(false); setEditingId(null); }} />
                     <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl border border-white/20 shadow-xl">
                         <div className="px-6 py-4 border-b border-slate-200/60 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-slate-800">Add New Guest</h3>
+                            <h3 className="text-lg font-semibold text-slate-800">{editingId ? 'Edit Guest' : 'Add New Guest'}</h3>
                             <button
-                                onClick={() => setShowNewGuest(false)}
+                                onClick={() => { setShowNewGuest(false); setEditingId(null); }}
                                 className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
                             >
                                 <Icon icon="lucide:x" width="18" height="18" />
@@ -483,23 +465,28 @@ export default function Guests() {
 
                             <div className="flex items-center justify-end gap-3 pt-4">
                                 <button
-                                    onClick={() => setShowNewGuest(false)}
+                                    onClick={() => { setShowNewGuest(false); setEditingId(null); }}
                                     className="px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
                                 >
                                     Cancel
                                 </button>
                                 <button
-                                    onClick={handleCreateGuest}
+                                    onClick={handleSaveGuest}
                                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors"
                                 >
-                                    <Icon icon="lucide:plus" width="16" height="16" />
-                                    Create Guest
+                                    <Icon icon={editingId ? 'lucide:check' : 'lucide:plus'} width="16" height="16" />
+                                    {editingId ? 'Save Changes' : 'Create Guest'}
                                 </button>
                             </div>
+
+                            {error && <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</div>}
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Details modal */}
+            {viewGuest && <GuestDetailsModal guest={viewGuest} onClose={() => setViewGuest(null)} />}
         </>
     );
 }

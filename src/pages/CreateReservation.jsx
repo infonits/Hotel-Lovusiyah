@@ -3,60 +3,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
+import { supabase } from '../lib/supabse';
 
-// --- Mock data (replace with real APIs) ---
-const ALL_ROOMS = [
-    { _id: 'r101', roomNumber: '101', type: 'Standard', price: 60, capacity: 2 },
-    { _id: 'r102', roomNumber: '102', type: 'Standard', price: 60, capacity: 2 },
-    { _id: 'r201', roomNumber: '201', type: 'Deluxe', price: 90, capacity: 3 },
-    { _id: 'r202', roomNumber: '202', type: 'Deluxe', price: 95, capacity: 3 },
-    { _id: 'r301', roomNumber: '301', type: 'Suite', price: 150, capacity: 4 },
-];
-
-const MOCK_BLOCKS = [
-    { roomId: 'r101', from: '2025-09-17', to: '2025-09-18' },
-    { roomId: 'r201', from: '2025-09-19', to: '2025-09-20' },
-];
-
-// --- Utils ---
-const overlap = (aStart, aEnd, bStart, bEnd) => {
-    const aS = dayjs(aStart);
-    const aE = dayjs(aEnd);
-    const bS = dayjs(bStart);
-    const bE = dayjs(bEnd);
-    return aS.isBefore(bE) && bS.isBefore(aE); // [aS, aE) x [bS, bE)
-};
-
+/* ---------- Utils ---------- */
 const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
 const nightsBetween = (from, to) =>
     from && to ? Math.max(0, dayjs(to).diff(dayjs(from), 'day')) : 0;
-
-// --- API placeholders (swap with real endpoints) ---
-async function apiCheckAvailability(_from, _to) {
-    return ALL_ROOMS; // Return all rooms every time
-}
-
-const MOCK_GUESTS = {
-    '991234567V': {
-        _id: 'g01',
-        name: 'Kajan',
-        nicNumber: '991234567V',
-        phone: '0771234567',
-        email: 'kajan@example.com',
-        address: 'Jaffna',
-    },
-};
-
-async function apiFindGuestByNIC(nic) {
-    await new Promise((res) => setTimeout(res, 200));
-    return MOCK_GUESTS[nic] ?? null;
-}
-
-async function apiCreateOrGetReservation(payload) {
-    console.log('Submitting reservation payload:', payload);
-    await new Promise((res) => setTimeout(res, 300));
-    return { ok: true, reservationId: 'RES-' + Math.random().toString(36).slice(2, 8).toUpperCase() };
-}
 
 const steps = [
     { key: 1, label: 'Dates & Rooms', icon: 'lucide:calendar-check' },
@@ -64,7 +16,7 @@ const steps = [
     { key: 3, label: 'Extras & Review', icon: 'lucide:sticky-note' },
 ];
 
-/* ---------- Hoisted child components (stable identity) ---------- */
+/* ---------- Hoisted child components (unchanged design) ---------- */
 
 function Stepper({ step }) {
     return (
@@ -150,17 +102,17 @@ function DatesAndRooms({
                     <div className="col-span-full text-slate-500 text-sm">No rooms available for the selected dates.</div>
                 )}
                 {availableRooms.map((r) => {
-                    const active = selectedRoomIds.includes(r._id);
+                    const active = selectedRoomIds.includes(r.id);
                     return (
                         <button
-                            key={r._id}
+                            key={r.id}
                             type="button"
-                            onClick={() => toggleRoom(r._id)}
+                            onClick={() => toggleRoom(r.id)}
                             className={`text-left p-4 rounded-xl border shadow-sm transition
                 ${active ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}
                         >
                             <div className="flex items-center justify-between">
-                                <div className="font-semibold text-slate-800">Room {r.roomNumber}</div>
+                                <div className="font-semibold text-slate-800">Room {r.number}</div>
                                 <Icon icon={active ? 'lucide:check-circle-2' : 'lucide:circle'} className="w-5 h-5 text-emerald-600" />
                             </div>
                             <div className="mt-1 text-sm text-slate-600">
@@ -208,7 +160,7 @@ function GuestDetails({
     const handleAddGuest = () => {
         if (!currentGuest.name || !currentGuest.nicNumber) return;
         setGuests((prev) => [...prev, currentGuest]);
-        setCurrentGuest({ name: '', nicNumber: '', phone: '', email: '', address: '' });
+        setCurrentGuest({ name: '', nicNumber: '', phone: '', email: '', address: '', id: null });
         setNic('');
     };
 
@@ -371,7 +323,7 @@ function ExtrasAndReview({
                         onChange={(e) => setNotes(e.target.value)}
                         rows={4}
                         className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                        placeholder="Internal notes for staff"
+                        placeholder="Vehicle number, any internal notes for staff"
                     />
                 </div>
 
@@ -391,8 +343,8 @@ function ExtrasAndReview({
                         ) : (
                             <ul className="mt-1 space-y-1">
                                 {selectedRooms.map((r) => (
-                                    <li key={r._id} className="flex items-center justify-between">
-                                        <span className="text-slate-800">#{r.roomNumber} · {r.type}</span>
+                                    <li key={r.id} className="flex items-center justify-between">
+                                        <span className="text-slate-800">#{r.number} · {r.type}</span>
                                         <span className="text-slate-800">{currencyLKR(r.price)} × {totalNights}</span>
                                     </li>
                                 ))}
@@ -459,14 +411,14 @@ export default function CreateReservation() {
 
     // Step 1
     const [dates, setDates] = useState({ from: today, to: tomorrow });
-    const [availableRooms, setAvailableRooms] = useState(ALL_ROOMS);
+    const [availableRooms, setAvailableRooms] = useState([]);
     const [loadingRooms, setLoadingRooms] = useState(false);
     const [selectedRoomIds, setSelectedRoomIds] = useState([]);
 
     // Step 2
     const [nic, setNic] = useState('');
-    const [guests, setGuests] = useState([]);
-    const [currentGuest, setCurrentGuest] = useState({ name: '', nicNumber: '', phone: '', email: '', address: '' });
+    const [guests, setGuests] = useState([]); // [{ id?, name, nicNumber, phone, email, address }]
+    const [currentGuest, setCurrentGuest] = useState({ id: null, name: '', nicNumber: '', phone: '', email: '', address: '' });
     const [guestLoading, setGuestLoading] = useState(false);
     const [guestFound, setGuestFound] = useState(null);
 
@@ -477,36 +429,212 @@ export default function CreateReservation() {
 
     const totalNights = useMemo(() => nightsBetween(dates.from, dates.to), [dates]);
     const selectedRooms = useMemo(
-        () => availableRooms.filter((r) => selectedRoomIds.includes(r._id)),
+        () => availableRooms.filter((r) => selectedRoomIds.includes(r.id)),
         [availableRooms, selectedRoomIds]
     );
     const roomTotal = useMemo(
-        () => selectedRooms.reduce((sum, r) => sum + r.price * totalNights, 0),
+        () => selectedRooms.reduce((sum, r) => sum + Number(r.price || 0) * totalNights, 0),
         [selectedRooms, totalNights]
     );
 
-    // Load availability when dates change
-    useEffect(() => {
-        let alive = true;
-        (async () => {
-            if (!dates.from || !dates.to || dayjs(dates.to).isSameOrBefore(dayjs(dates.from))) {
+    /* ---------- Data access: Rooms availability from DB ---------- */
+
+    const fetchAvailableRooms = async (fromDate, toDate) => {
+        setLoadingRooms(true);
+        try {
+            // 1) Get all rooms
+            const { data: rooms, error: roomsErr } = await supabase
+                .from('rooms')
+                .select('id, number, type, capacity, price')
+                .order('number', { ascending: true });
+            if (roomsErr) throw roomsErr;
+
+            // If dates invalid, just show nothing
+            const validRange =
+                fromDate && toDate && dayjs(toDate).diff(dayjs(fromDate), 'day') > 0;
+
+            if (!validRange) {
                 setAvailableRooms([]);
                 setSelectedRoomIds([]);
+                setLoadingRooms(false);
                 return;
             }
-            setLoadingRooms(true);
-            const res = await apiCheckAvailability(dates.from, dates.to);
-            if (!alive) return;
-            setAvailableRooms(res);
-            setSelectedRoomIds((prev) => prev.filter((id) => res.some((r) => r._id === id)));
-            setLoadingRooms(false);
-        })();
-        return () => {
-            alive = false;
-        };
-    }, [dates]);
 
-    const canNextFromStep1 = dates.from && dates.to && totalNights > 0 && selectedRoomIds.length > 0;
+            // 2) Get booked room_ids in range via RPC (includes room_blocks)
+            const { data: booked, error: bookedErr } = await supabase.rpc(
+                'fn_booked_room_ids',
+                { from_date: fromDate, to_date: toDate }
+            );
+            if (bookedErr) throw bookedErr;
+
+            const bookedIds = new Set((booked || []).map((r) => r.room_id));
+
+            // 3) Filter available
+            const available = (rooms || []).filter((r) => !bookedIds.has(r.id));
+            setAvailableRooms(available);
+
+            // prune any selected id that is no longer available
+            setSelectedRoomIds((prev) => prev.filter((id) => available.some((r) => r.id === id)));
+        } catch (e) {
+            console.error(e);
+            setAvailableRooms([]);
+        } finally {
+            setLoadingRooms(false);
+        }
+    };
+
+    // Load availability when dates change
+    useEffect(() => {
+        fetchAvailableRooms(dates.from, dates.to);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dates.from, dates.to]);
+
+    /* ---------- Step 2: Find guest by NIC (DB) ---------- */
+
+    const handleFindGuest = async () => {
+        if (!nic.trim()) return;
+        setGuestLoading(true);
+        try {
+            // strict match on NIC
+            const { data: gData, error } = await supabase
+                .from('guests')
+                .select('id, name, nic, phone, email, address')
+                .eq('nic', nic.trim())
+                .maybeSingle();
+            if (error && error.code !== 'PGRST116') throw error; // ignore "no rows" error
+
+            if (gData) {
+                setCurrentGuest({
+                    id: gData.id,
+                    name: gData.name || '',
+                    nicNumber: gData.nic || '',
+                    phone: gData.phone || '',
+                    email: gData.email || '',
+                    address: gData.address || '',
+                });
+                setGuestFound(true);
+            } else {
+                setCurrentGuest({
+                    id: null,
+                    name: '',
+                    nicNumber: nic.trim(),
+                    phone: '',
+                    email: '',
+                    address: '',
+                });
+                setGuestFound(false);
+            }
+        } catch (e) {
+            console.error(e);
+            setGuestFound(null);
+        } finally {
+            setGuestLoading(false);
+        }
+    };
+
+    /* ---------- Step 3: Submit (create reservation + links) ---------- */
+
+    // Ensure a guest exists by NIC (returns guest id)
+    const ensureGuestByNIC = async (g) => {
+        // If already has id, assume it exists
+        if (g.id) return g.id;
+
+        // Try find by NIC
+        const { data: found, error: findErr } = await supabase
+            .from('guests')
+            .select('id')
+            .eq('nic', g.nicNumber)
+            .maybeSingle();
+        if (findErr && findErr.code !== 'PGRST116') throw findErr;
+        if (found?.id) return found.id;
+
+        // Insert new guest
+        const payload = {
+            name: g.name || null,
+            email: g.email || null,
+            phone: g.phone || null,
+            nic: g.nicNumber || null,
+            address: g.address || null,
+            country: null,
+            city: null,
+            nationality: null,
+            dob: null,
+            notes: null,
+        };
+        const { data: inserted, error: insErr } = await supabase
+            .from('guests')
+            .insert(payload)
+            .select('id')
+            .single();
+        if (insErr) throw insErr;
+        return inserted.id;
+    };
+
+    const handleSubmit = async () => {
+        setSubmitting(true);
+        try {
+            // 1) Insert reservation
+            const { data: resv, error: resvErr } = await supabase
+                .from('reservations')
+                .insert({
+                    check_in_date: dates.from,
+                    check_out_date: dates.to,
+                    special_requests: specialRequests || null,
+                    notes: notes || null, // can include vehicle number text
+                    estimated_total: roomTotal,
+                })
+                .select('id')
+                .single();
+            if (resvErr) throw resvErr;
+
+            const reservationId = resv.id;
+
+            // 2) Insert reservation_rooms
+            const roomRows = selectedRooms.map((r) => ({
+                reservation_id: reservationId,
+                room_id: r.id,
+                nightly_rate: Number(r.price || 0),
+            }));
+            if (roomRows.length) {
+                const { error: rrErr } = await supabase.from('reservation_rooms').insert(roomRows);
+                if (rrErr) throw rrErr;
+            }
+
+            // 3) Ensure guests exist, then link
+            const guestIds = [];
+            for (const g of guests) {
+                const gid = await ensureGuestByNIC(g);
+                guestIds.push(gid);
+            }
+            const linkRows = guestIds.map((gid) => ({
+                reservation_id: reservationId,
+                guest_id: gid,
+            }));
+            if (linkRows.length) {
+                const { error: rgErr } = await supabase.from('reservation_guests').insert(linkRows);
+                if (rgErr) throw rgErr;
+            }
+
+            alert('Reservation created successfully.');
+            // Reset wizard
+            setStep(1);
+            setSelectedRoomIds([]);
+            setSpecialRequests('');
+            setNotes('');
+            setGuests([]);
+        } catch (e) {
+            console.error(e);
+            alert('Failed to create reservation.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const canNextFromStep1 =
+        dates.from && dates.to &&
+        dayjs(dates.to).diff(dayjs(dates.from), 'day') > 0 &&
+        selectedRoomIds.length > 0;
+
     const canNextFromStep2 = guests.length > 0;
 
     const goNext = () => setStep((s) => Math.min(3, s + 1));
@@ -514,58 +642,6 @@ export default function CreateReservation() {
 
     const toggleRoom = (id) => {
         setSelectedRoomIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    };
-
-    const handleFindGuest = async () => {
-        if (!nic.trim()) return;
-        setGuestLoading(true);
-        const g = await apiFindGuestByNIC(nic.trim());
-        setGuestLoading(false);
-        if (g) {
-            setCurrentGuest({
-                name: g.name || '',
-                nicNumber: g.nicNumber || '',
-                phone: g.phone || '',
-                email: g.email || '',
-                address: g.address || '',
-            });
-            setGuestFound(true);
-        } else {
-            setCurrentGuest({
-                name: '',
-                nicNumber: nic.trim(),
-                phone: '',
-                email: '',
-                address: '',
-            });
-            setGuestFound(false);
-        }
-    };
-
-    const handleSubmit = async () => {
-        setSubmitting(true);
-        const payload = {
-            checkInDate: dates.from,
-            checkOutDate: dates.to,
-            nights: totalNights,
-            rooms: selectedRooms.map((r) => ({ roomId: r._id, price: r.price })),
-            guests,
-            specialRequests,
-            notes,
-            estimatedTotal: roomTotal,
-        };
-        const res = await apiCreateOrGetReservation(payload);
-        setSubmitting(false);
-        if (res.ok) {
-            alert(`Reservation created: ${res.reservationId}`);
-            setStep(1);
-            setSelectedRoomIds([]);
-            setSpecialRequests('');
-            setNotes('');
-            setGuests([]);
-        } else {
-            alert('Failed to create reservation');
-        }
     };
 
     return (
