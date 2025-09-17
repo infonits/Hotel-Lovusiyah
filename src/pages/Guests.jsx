@@ -223,7 +223,7 @@ export default function Guests() {
                                 New Guest
                             </button>
                             <div className="text-sm text-slate-600">
-                                <span>{loading ? 'Loading…' : `Showing ${paginatedData.length} of ${filteredData.length} guests`}</span>
+                                <span>{loading && 'Loading…'}</span>
                             </div>
                         </div>
                     </div>
