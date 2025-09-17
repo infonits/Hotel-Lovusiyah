@@ -1,39 +1,33 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useEffect, useState } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useState, useCallback } from 'react';
 import dayjs from 'dayjs';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { supabase } from '../lib/supabse';
 
 const ReservationContext = createContext(null);
 export const useReservation = () => useContext(ReservationContext);
 
 const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
 
-const SERVICE_CATALOG = [
-    { title: 'Laundry', rate: 500 },
-    { title: 'Room Cleaning', rate: 300 },
-    { title: 'Airport Pickup', rate: 4500 },
-    { title: 'Extra Bed', rate: 1500 },
-];
-
-const FOOD_CATALOG = [
-    { title: 'Fried Rice', rate: 1200 },
-    { title: 'Koththu', rate: 1100 },
-    { title: 'Chicken Curry', rate: 900 },
-    { title: 'String Hoppers Set', rate: 800 },
-];
-
 export function ReservationProvider({ initialReservation, children }) {
-    // Items
-    const [services, setServices] = useState([]);
-    const [foods, setFoods] = useState([]);
+    // Catalogs (services + menus from Supabase)
+    const [serviceCatalog, setServiceCatalog] = useState([]); // [{id,title,rate}]
+    const [foodCatalog, setFoodCatalog] = useState([]);       // [{id,title,rate,category}]
+    const [catalogLoading, setCatalogLoading] = useState(true);
+
+    // Items (now persisted in Supabase)
+    const [services, setServices] = useState([]); // [{_id,title,qty,rate,amount}]
+    const [foods, setFoods] = useState([]);       // [{_id,title,qty,rate,amount}]
+    const [itemsLoading, setItemsLoading] = useState(true);
+
+    // Payments (persisted in Supabase)
     const [payments, setPayments] = useState([]);
+    const [paymentsLoading, setPaymentsLoading] = useState(true);
 
     // Tabs
-    const [tab, setTab] = useState('services'); // 'services' | 'foods' | 'payments'
+    const [tab, setTab] = useState('services');
 
-    // Item modal (Service/Food)
+    // Item modal
     const [itemModalOpen, setItemModalOpen] = useState(false);
     const [itemMode, setItemMode] = useState('service'); // 'service' | 'food'
     const [itemEditing, setItemEditing] = useState(null);
@@ -49,12 +43,125 @@ export function ReservationProvider({ initialReservation, children }) {
         amount: 0,
     });
 
-    // compute amount whenever qty/rate change
+    /* -------------------- Catalogs -------------------- */
     useEffect(() => {
-        setItemForm((f) => ({ ...f, amount: Number(f.qty || 0) * Number(f.rate || 0) }));
+        let alive = true;
+        (async () => {
+            setCatalogLoading(true);
+            try {
+                // services (active)
+                const { data: svc, error: svcErr } = await supabase
+                    .from('services')
+                    .select('id, name, price, status')
+                    .eq('status', 'active')
+                    .order('name', { ascending: true });
+                if (svcErr) throw svcErr;
+
+                // menus
+                const { data: menus, error: menuErr } = await supabase
+                    .from('menus')
+                    .select('id, name, price, category')
+                    .order('name', { ascending: true });
+                if (menuErr) throw menuErr;
+
+                if (!alive) return;
+                setServiceCatalog((svc || []).map(s => ({ id: s.id, title: s.name, rate: Number(s.price || 0) })));
+                setFoodCatalog((menus || []).map(m => ({ id: m.id, title: m.name, rate: Number(m.price || 0), category: m.category })));
+            } catch (e) {
+                console.error('Catalog load failed:', e);
+                if (!alive) return;
+                setServiceCatalog([]);
+                setFoodCatalog([]);
+            } finally {
+                if (alive) setCatalogLoading(false);
+            }
+        })();
+        return () => { alive = false; };
+    }, []);
+
+    /* -------------------- Items (services + foods) -------------------- */
+    const mapItemRow = (r) => ({
+        _id: r.id,
+        title: r.title,
+        qty: Number(r.qty || 0),
+        rate: Number(r.rate || 0),
+        amount: Number(r.amount || 0),
+        kind: r.kind
+    });
+
+    const reloadItems = useCallback(async () => {
+        if (!initialReservation?.id) {
+            setServices([]);
+            setFoods([]);
+            setItemsLoading(false);
+            return;
+        }
+        setItemsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('reservation_items')
+                .select('id, kind, title, qty, rate, amount, created_at')
+                .eq('reservation_id', initialReservation.id)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            const rows = (data || []).map(mapItemRow);
+            setServices(rows.filter(r => r.kind === 'service'));
+            setFoods(rows.filter(r => r.kind === 'food'));
+        } catch (e) {
+            console.error('Items load failed:', e);
+            setServices([]);
+            setFoods([]);
+        } finally {
+            setItemsLoading(false);
+        }
+    }, [initialReservation?.id]);
+
+    useEffect(() => {
+        reloadItems();
+    }, [reloadItems]);
+
+    /* -------------------- Payments -------------------- */
+    const reloadPayments = useCallback(async () => {
+        if (!initialReservation?.id) {
+            setPayments([]);
+            setPaymentsLoading(false);
+            return;
+        }
+        setPaymentsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('payments')
+                .select('id, type, method, date, amount')
+                .eq('reservation_id', initialReservation.id)
+                .order('date', { ascending: false });
+            if (error) throw error;
+
+            setPayments((data || []).map(p => ({
+                _id: p.id,
+                type: p.type,
+                method: p.method,
+                date: p.date,
+                amount: Number(p.amount || 0),
+            })));
+        } catch (e) {
+            console.error('Payments load failed:', e);
+            setPayments([]);
+        } finally {
+            setPaymentsLoading(false);
+        }
+    }, [initialReservation?.id]);
+
+    useEffect(() => {
+        reloadPayments();
+    }, [reloadPayments]);
+
+    /* -------------------- Auto math for item form -------------------- */
+    useEffect(() => {
+        setItemForm(f => ({ ...f, amount: Number(f.qty || 0) * Number(f.rate || 0) }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [itemForm.qty, itemForm.rate]);
 
+    // Seed item form when modal toggles
     useEffect(() => {
         if (itemModalOpen) {
             if (itemEditing) {
@@ -71,6 +178,7 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     }, [itemModalOpen, itemEditing]);
 
+    // Payment modal hydrate
     useEffect(() => {
         if (paymentModalOpen) {
             if (paymentEditing) {
@@ -92,118 +200,182 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     }, [paymentModalOpen, paymentEditing]);
 
-    // Totals
+    /* -------------------- Totals -------------------- */
     const nights = useMemo(
         () => dayjs(initialReservation.checkOutDate).diff(dayjs(initialReservation.checkInDate), 'day'),
         [initialReservation]
     );
-    const fmt = (v) => {
-        const n = Number(v);
-        return Number.isFinite(n) ? n.toFixed(2) : '0.00';
-    };
-
-
     const roomCharges = useMemo(
         () => (initialReservation.rooms || []).reduce((sum, r) => sum + (Number(r.price || 0) * nights), 0),
         [initialReservation.rooms, nights]
     );
-
     const otherCharges = useMemo(
         () => [...services, ...foods].reduce((sum, x) => sum + Number(x.amount || 0), 0),
         [services, foods]
     );
-
     const total = useMemo(() => roomCharges + otherCharges, [roomCharges, otherCharges]);
     const paid = useMemo(() => payments.reduce((sum, p) => sum + Number(p.amount || 0), 0), [payments]);
     const balance = useMemo(() => Math.max(0, total - paid), [total, paid]);
 
-    // Item handlers
-    const openAddService = () => {
-        setItemMode('service');
-        setItemEditing(null);
-        setItemModalOpen(true);
-    };
-    const openAddFood = () => {
-        setItemMode('food');
-        setItemEditing(null);
-        setItemModalOpen(true);
-    };
-    const openEditService = (it) => {
-        setItemMode('service');
-        setItemEditing(it);
-        setItemModalOpen(true);
-    };
-    const openEditFood = (it) => {
-        setItemMode('food');
-        setItemEditing(it);
-        setItemModalOpen(true);
-    };
-    const saveItem = () => {
-        const item = {
-            _id:
-                itemForm._id ||
-                `${itemMode}-${(crypto.randomUUID?.() || Math.random().toString(36).slice(2, 9))}`,
+    /* -------------------- Item handlers (CRUD) -------------------- */
+    const openAddService = () => { setItemMode('service'); setItemEditing(null); setItemModalOpen(true); };
+    const openAddFood = () => { setItemMode('food'); setItemEditing(null); setItemModalOpen(true); };
+    const openEditService = (it) => { setItemMode('service'); setItemEditing(it); setItemModalOpen(true); };
+    const openEditFood = (it) => { setItemMode('food'); setItemEditing(it); setItemModalOpen(true); };
+
+    const saveItem = async () => {
+        const rec = {
             title: itemForm.title,
             qty: Number(itemForm.qty || 0),
             rate: Number(itemForm.rate || 0),
             amount: Number(itemForm.amount || 0),
         };
-        if (itemEditing?._id) {
-            if (itemMode === 'service') setServices((prev) => prev.map((x) => (x._id === item._id ? item : x)));
-            else setFoods((prev) => prev.map((x) => (x._id === item._id ? item : x)));
-        } else {
-            if (itemMode === 'service') setServices((prev) => [item, ...prev]);
-            else setFoods((prev) => [item, ...prev]);
-        }
-        setItemModalOpen(false);
-        setItemEditing(null);
-    };
-    const deleteService = (id) => setServices((prev) => prev.filter((x) => x._id !== id));
-    const deleteFood = (id) => setFoods((prev) => prev.filter((x) => x._id !== id));
 
-    // Payment handlers
-    const openAddPayment = () => {
-        setPaymentEditing(null);
-        setPaymentModalOpen(true);
+        // Local fallback if no reservation id (shouldn't happen for real pages)
+        if (!initialReservation?.id) {
+            const local = {
+                _id: itemForm._id || `${itemMode}-${(crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 9))}`,
+                ...rec,
+            };
+            if (itemMode === 'service') {
+                if (itemEditing?._id) setServices(prev => prev.map(x => (x._id === local._id ? local : x)));
+                else setServices(prev => [local, ...prev]);
+            } else {
+                if (itemEditing?._id) setFoods(prev => prev.map(x => (x._id === local._id ? local : x)));
+                else setFoods(prev => [local, ...prev]);
+            }
+            setItemModalOpen(false); setItemEditing(null);
+            return;
+        }
+
+        setItemsLoading(true);
+        try {
+            if (itemEditing?._id) {
+                // UPDATE
+                const { error } = await supabase
+                    .from('reservation_items')
+                    .update(rec)
+                    .eq('id', itemEditing._id);
+                if (error) throw error;
+            } else {
+                // INSERT
+                const { error } = await supabase
+                    .from('reservation_items')
+                    .insert({
+                        reservation_id: initialReservation.id,
+                        kind: itemMode, // 'service' | 'food'
+                        ...rec,
+                    });
+                if (error) throw error;
+            }
+            await reloadItems();
+        } catch (e) {
+            console.error('Save item failed:', e);
+        } finally {
+            setItemsLoading(false);
+            setItemModalOpen(false);
+            setItemEditing(null);
+        }
     };
-    const openEditPayment = (p) => {
-        setPaymentEditing(p);
-        setPaymentModalOpen(true);
+
+    const deleteService = async (id) => {
+        if (!initialReservation?.id) { setServices(prev => prev.filter(x => x._id !== id)); return; }
+        setItemsLoading(true);
+        try {
+            const { error } = await supabase.from('reservation_items').delete().eq('id', id);
+            if (error) throw error;
+            setServices(prev => prev.filter(x => x._id !== id));
+        } catch (e) {
+            console.error('Delete service failed:', e);
+        } finally {
+            setItemsLoading(false);
+        }
     };
-    const savePayment = () => {
+
+    const deleteFood = async (id) => {
+        if (!initialReservation?.id) { setFoods(prev => prev.filter(x => x._id !== id)); return; }
+        setItemsLoading(true);
+        try {
+            const { error } = await supabase.from('reservation_items').delete().eq('id', id);
+            if (error) throw error;
+            setFoods(prev => prev.filter(x => x._id !== id));
+        } catch (e) {
+            console.error('Delete food failed:', e);
+        } finally {
+            setItemsLoading(false);
+        }
+    };
+
+    /* -------------------- Payments (CRUD) -------------------- */
+    const openAddPayment = () => { setPaymentEditing(null); setPaymentModalOpen(true); };
+    const openEditPayment = (p) => { setPaymentEditing(p); setPaymentModalOpen(true); };
+
+    const savePayment = async () => {
         const rec = {
-            _id: paymentForm._id || `pay-${(crypto.randomUUID?.() || Math.random().toString(36).slice(2, 9))}`,
             type: paymentForm.type,
             method: paymentForm.method,
             date: paymentForm.date,
             amount: Number(paymentForm.amount || 0),
         };
-        if (paymentEditing?._id) {
-            setPayments((prev) => prev.map((p) => (p._id === rec._id ? rec : p)));
-        } else {
-            setPayments((prev) => [rec, ...prev]);
-        }
-        setPaymentModalOpen(false);
-        setPaymentEditing(null);
-    };
-    const deletePayment = (id) => setPayments((prev) => prev.filter((x) => x._id !== id));
 
-    // Print PDF (same as your page)
+        if (!initialReservation?.id) {
+            const local = { _id: paymentForm._id || `pay-${(crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 9))}`, ...rec };
+            if (paymentEditing?._id) setPayments(prev => prev.map(p => (p._id === local._id ? local : p)));
+            else setPayments(prev => [local, ...prev]);
+            setPaymentModalOpen(false); setPaymentEditing(null);
+            return;
+        }
+
+        setPaymentsLoading(true);
+        try {
+            if (paymentEditing?._id) {
+                const { error } = await supabase.from('payments').update(rec).eq('id', paymentEditing._id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('payments')
+                    .insert({ reservation_id: initialReservation.id, ...rec });
+                if (error) throw error;
+            }
+            await reloadPayments();
+        } catch (e) {
+            console.error('Save payment failed:', e);
+        } finally {
+            setPaymentsLoading(false);
+            setPaymentModalOpen(false);
+            setPaymentEditing(null);
+        }
+    };
+
+    const deletePayment = async (id) => {
+        if (!initialReservation?.id) { setPayments(prev => prev.filter(x => x._id !== id)); return; }
+        setPaymentsLoading(true);
+        try {
+            const { error } = await supabase.from('payments').delete().eq('id', id);
+            if (error) throw error;
+            setPayments(prev => prev.filter(x => x._id !== id));
+        } catch (e) {
+            console.error('Delete payment failed:', e);
+        } finally {
+            setPaymentsLoading(false);
+        }
+    };
+
+    /* -------------------- Print (unchanged UI) -------------------- */
     const handlePrint = async () => {
         const { default: jsPDF } = await import('jspdf');
         const { default: autoTable } = await import('jspdf-autotable');
 
         const doc = new jsPDF();
         const res = initialReservation || {};
+        const n = nights;
 
-        // Header
         doc.setFontSize(16);
         doc.text('Hotel Bill / Invoice', 14, 16);
         doc.setFontSize(10);
         doc.text(`Reservation: ${res.code || '-'}`, 14, 22);
         doc.text(`Date: ${dayjs().format('YYYY-MM-DD HH:mm')}`, 200 - 14, 22, { align: 'right' });
 
-        // Guest & Stay
         doc.setFontSize(12);
         doc.text('Guest & Stay', 14, 32);
         doc.setFontSize(10);
@@ -211,21 +383,24 @@ export function ReservationProvider({ initialReservation, children }) {
             `Guest: ${res.guest?.name || '-'} (${res.guest?.nicNumber || '-'})`,
             `Phone: ${res.guest?.phone || '-'}   Email: ${res.guest?.email || '-'}`,
             `Check-in: ${dayjs(res.checkInDate).format('YYYY-MM-DD')}   Check-out: ${dayjs(res.checkOutDate).format('YYYY-MM-DD')}`,
-            `Rooms: ${(res.rooms || []).map((r) => r.roomNumber).join(', ') || '-'}`,
-            `Nights: ${nights}`,
+            `Rooms: ${(res.rooms || []).map(r => (r.roomNumber || r.number || '—')).join(', ') || '-'}`,
+            `Nights: ${n}`,
         ].forEach((l, i) => doc.text(l, 14, 38 + i * 6));
 
         // Rooms
         autoTable(doc, {
             startY: 68,
             head: [['Room', 'Type', 'Rate (LKR)', 'Nights', 'Amount (LKR)']],
-            body: (res.rooms || []).map((r) => [
-                r.roomNumber,
-                r.type,
-                fmt(r.price), ,
-                nights,
-                fmt(nights * (r.price || 0)), ,
-            ]),
+            body: (res.rooms || []).map((r) => {
+                const rate = Number(r.price || 0);
+                return [
+                    (r.roomNumber || r.number || '—'),
+                    (r.type || '—'),
+                    rate.toFixed(2),
+                    n,
+                    (n * rate).toFixed(2),
+                ];
+            }),
             theme: 'grid',
             styles: { fontSize: 9 },
             headStyles: { fillColor: [15, 23, 42] },
@@ -239,7 +414,7 @@ export function ReservationProvider({ initialReservation, children }) {
             startY: y + 4,
             head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
             body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
-                s.title, s.qty, fmt(s.rate), fmt(s.amount)
+                s.title, s.qty, Number(s.rate || 0).toFixed(2), Number(s.amount || 0).toFixed(2)
             ]),
             theme: 'grid',
             styles: { fontSize: 9 },
@@ -254,7 +429,7 @@ export function ReservationProvider({ initialReservation, children }) {
             startY: y + 4,
             head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
             body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
-                f.title, f.qty, fmt(f.rate), fmt(f.amount)
+                f.title, f.qty, Number(f.rate || 0).toFixed(2), Number(f.amount || 0).toFixed(2)
             ]),
             theme: 'grid',
             styles: { fontSize: 9 },
@@ -269,7 +444,7 @@ export function ReservationProvider({ initialReservation, children }) {
             startY: y + 4,
             head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
             body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
-                p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), fmt(p.amount)
+                p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), Number(p.amount || 0).toFixed(2)
             ]),
             theme: 'grid',
             styles: { fontSize: 9 },
@@ -279,17 +454,15 @@ export function ReservationProvider({ initialReservation, children }) {
         y = (doc.lastAutoTable?.finalY ?? y) + 10;
 
         // Totals
-        doc.setFontSize(12);
-        doc.text('Totals', 14, y);
         autoTable(doc, {
             startY: y + 6,
             head: [['Label', 'Amount (LKR)']],
             body: [
-                ['Room Charges', fmt(roomCharges)],
-                ['Other Charges', fmt(otherCharges)],
-                ['Total', fmt(total)],
-                ['Paid', fmt(paid)],
-                ['Balance', fmt(balance)],
+                ['Room Charges', Number(roomCharges).toFixed(2)],
+                ['Other Charges', Number(otherCharges).toFixed(2)],
+                ['Total', Number(total).toFixed(2)],
+                ['Paid', Number(paid).toFixed(2)],
+                ['Balance', Number(balance).toFixed(2)],
             ],
             theme: 'plain',
             styles: { fontSize: 10 },
@@ -299,12 +472,16 @@ export function ReservationProvider({ initialReservation, children }) {
         doc.save(`${res.code || 'reservation'}.pdf`);
     };
 
-
     const value = {
         currencyLKR,
         initialReservation,
+
+        // catalogs + loaders
+        serviceCatalog, foodCatalog, catalogLoading,
+
         // state
-        services, foods, payments,
+        services, foods, itemsLoading,
+        payments, paymentsLoading,
         tab, setTab,
         itemModalOpen, setItemModalOpen,
         itemMode, setItemMode,
@@ -313,8 +490,10 @@ export function ReservationProvider({ initialReservation, children }) {
         paymentModalOpen, setPaymentModalOpen,
         paymentEditing, setPaymentEditing,
         paymentForm, setPaymentForm,
+
         // totals
         nights, roomCharges, otherCharges, total, paid, balance,
+
         // handlers
         openAddService, openAddFood, openEditService, openEditFood, saveItem, deleteService, deleteFood,
         openAddPayment, openEditPayment, savePayment, deletePayment,

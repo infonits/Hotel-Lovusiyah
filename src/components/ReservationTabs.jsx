@@ -7,23 +7,57 @@ import { useReservation } from '../context/reservationContext';
 
 export default function ReservationTabs() {
     const {
+        // state
         tab, setTab,
         services, foods, payments,
         currencyLKR,
+
+        // item handlers (from provider)
         openAddService, openAddFood, openEditService, openEditFood, deleteService, deleteFood,
+
+        // payment handlers (from provider)
         openAddPayment, openEditPayment, deletePayment,
-        SERVICE_CATALOG, FOOD_CATALOG, addItemFromCatalog,
+
+        // catalogs (Supabase-backed) + loaders
+        serviceCatalog, foodCatalog, catalogLoading,
+        paymentsLoading,
+
+        // modal controls to support Quick Add prefill
+        setItemMode, setItemForm, setItemModalOpen,
     } = useReservation();
 
+    // Prefill the item modal with a catalog entry (no design change; user just hits "Save")
+    const handleQuickAdd = (mode, entry) => {
+        setItemMode(mode);
+        setItemForm({
+            title: entry.title,
+            qty: 1,
+            rate: Number(entry.rate || 0),
+            amount: Number(entry.rate || 0),
+        });
+        setItemModalOpen(true);
+    };
+
     const QuickAdd = ({ mode }) => {
-        const list = mode === 'service' ? SERVICE_CATALOG : FOOD_CATALOG;
+        const list = mode === 'service' ? serviceCatalog : foodCatalog;
+
+        if (catalogLoading) {
+            return (
+                <div className="mt-4 flex flex-wrap gap-2 items-center">
+                    <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin text-slate-500" />
+                    <span className="text-sm text-slate-500">Loading {mode === 'service' ? 'services' : 'menus'}…</span>
+                </div>
+            );
+        }
+
         if (!list?.length) return null;
+
         return (
             <div className="mt-4 flex flex-wrap gap-2">
-                {list.map((it, idx) => (
+                {list.map((it) => (
                     <button
-                        key={`${mode}-${idx}`}
-                        onClick={() => addItemFromCatalog(mode, it)}
+                        key={`${mode}-${it.id}`}
+                        onClick={() => handleQuickAdd(mode, it)}
                         className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm hover:bg-slate-50 flex items-center gap-2"
                         title={`Add ${it.title}`}
                     >
@@ -76,7 +110,7 @@ export default function ReservationTabs() {
             {tab === 'services' && <QuickAdd mode="service" />}
             {tab === 'foods' && <QuickAdd mode="food" />}
 
-            {/* Tables */}
+            {/* Services table */}
             {tab === 'services' && (
                 <div className="mt-4 overflow-x-auto">
                     <table className="min-w-full">
@@ -91,7 +125,9 @@ export default function ReservationTabs() {
                         </thead>
                         <tbody>
                             {services.length === 0 ? (
-                                <tr><td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No services added.</td></tr>
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No services added.</td>
+                                </tr>
                             ) : services.map((s) => (
                                 <tr key={s._id} className="border-b last:border-0">
                                     <td className="px-4 py-3 text-slate-800">{s.title}</td>
@@ -115,6 +151,7 @@ export default function ReservationTabs() {
                 </div>
             )}
 
+            {/* Foods table */}
             {tab === 'foods' && (
                 <div className="mt-4 overflow-x-auto">
                     <table className="min-w-full">
@@ -129,7 +166,9 @@ export default function ReservationTabs() {
                         </thead>
                         <tbody>
                             {foods.length === 0 ? (
-                                <tr><td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No foods added.</td></tr>
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No foods added.</td>
+                                </tr>
                             ) : foods.map((f) => (
                                 <tr key={f._id} className="border-b last:border-0">
                                     <td className="px-4 py-3 text-slate-800">{f.title}</td>
@@ -153,6 +192,7 @@ export default function ReservationTabs() {
                 </div>
             )}
 
+            {/* Payments table */}
             {tab === 'payments' && (
                 <div className="mt-4 overflow-x-auto">
                     <table className="min-w-full">
@@ -166,26 +206,37 @@ export default function ReservationTabs() {
                             </tr>
                         </thead>
                         <tbody>
-                            {payments.length === 0 ? (
-                                <tr><td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No payments recorded.</td></tr>
-                            ) : payments.map((p) => (
-                                <tr key={p._id} className="border-b last:border-0">
-                                    <td className="px-4 py-3 text-slate-800">{p.type}</td>
-                                    <td className="px-4 py-3 text-slate-600">{p.method}</td>
-                                    <td className="px-4 py-3 text-slate-600">{dayjs(p.date).format('YYYY-MM-DD')}</td>
-                                    <td className="px-4 py-3 text-slate-800 font-medium">{currencyLKR(p.amount)}</td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex gap-2">
-                                            <button onClick={() => openEditPayment(p)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
-                                                <Icon icon="lucide:square-pen" className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => deletePayment(p._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
-                                                <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                            {paymentsLoading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm flex items-center gap-2">
+                                        <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" />
+                                        Loading payments…
                                     </td>
                                 </tr>
-                            ))}
+                            ) : payments.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No payments recorded.</td>
+                                </tr>
+                            ) : (
+                                payments.map((p) => (
+                                    <tr key={p._id} className="border-b last:border-0">
+                                        <td className="px-4 py-3 text-slate-800">{p.type}</td>
+                                        <td className="px-4 py-3 text-slate-600">{p.method}</td>
+                                        <td className="px-4 py-3 text-slate-600">{dayjs(p.date).format('YYYY-MM-DD')}</td>
+                                        <td className="px-4 py-3 text-slate-800 font-medium">{currencyLKR(p.amount)}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex gap-2">
+                                                <button onClick={() => openEditPayment(p)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
+                                                    <Icon icon="lucide:square-pen" className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => deletePayment(p._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
+                                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

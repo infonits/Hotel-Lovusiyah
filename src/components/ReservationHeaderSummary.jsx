@@ -1,9 +1,9 @@
-'use client';
 
 import React from 'react';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { useReservation } from '../context/reservationContext';
+
 export default function ReservationHeaderSummary() {
     const {
         initialReservation, handlePrint, nights,
@@ -69,6 +69,9 @@ export default function ReservationHeaderSummary() {
                         <div className="text-xs text-slate-500">Room Charges</div>
                         <div className="text-lg font-semibold text-slate-800">{currencyLKR(roomCharges)}</div>
                     </div>
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-4 mt-4">
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Other Charges</div>
                         <div className="text-lg font-semibold text-slate-800">{currencyLKR(otherCharges)}</div>
@@ -77,20 +80,20 @@ export default function ReservationHeaderSummary() {
                         <div className="text-xs text-slate-500">Total</div>
                         <div className="text-lg font-semibold text-slate-800">{currencyLKR(total)}</div>
                     </div>
-                </div>
-
-                <div className="grid sm:grid-cols-3 gap-4 mt-4">
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Paid</div>
                         <div className="text-lg font-semibold text-slate-800">{currencyLKR(paid)}</div>
                     </div>
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-4 mt-4">
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Balance</div>
                         <div className={`text-lg font-semibold ${balance > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
                             {currencyLKR(balance)}
                         </div>
                     </div>
-                    <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
+                    <div className="p-4 rounded-xl border border-slate-200 bg-white/70 sm:col-span-2">
                         <div className="text-xs text-slate-500">Notes</div>
                         <div className="text-sm text-slate-700 line-clamp-2">{initialReservation.notes || '—'}</div>
                     </div>

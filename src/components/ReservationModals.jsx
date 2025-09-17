@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { useReservation } from '../context/reservationContext';
 
@@ -8,9 +8,15 @@ export default function ReservationModals() {
     const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
 
     const {
+        // catalogs from Supabase (provided by ReservationProvider)
+        serviceCatalog,   // [{ id, title, rate }]
+        foodCatalog,      // [{ id, title, rate, category }]
+        catalogLoading,
+
         // item modal
         itemModalOpen, setItemModalOpen, itemEditing, setItemEditing,
         itemMode, itemForm, setItemForm, saveItem,
+
         // payment modal
         paymentModalOpen, setPaymentModalOpen, paymentEditing, setPaymentEditing,
         paymentForm, setPaymentForm, savePayment,
@@ -40,6 +46,50 @@ export default function ReservationModals() {
         </div>
     );
 
+    // Group foods by category for a nicer dropdown
+    const foodGroups = useMemo(() => {
+        const groups = {};
+        (foodCatalog || []).forEach((f) => {
+            const key = f.category || 'Other';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(f);
+        });
+        // sort group labels & items
+        const sorted = Object.keys(groups).sort().map((k) => ({
+            category: k,
+            items: groups[k].sort((a, b) => a.title.localeCompare(b.title)),
+        }));
+        return sorted;
+    }, [foodCatalog]);
+
+    const handlePickCatalogItem = (idOrKey) => {
+        if (!idOrKey) {
+            // Reset title/rate if none selected
+            setItemForm({ ...itemForm, title: '', rate: 0 });
+            return;
+        }
+
+        if (itemMode === 'service') {
+            const found = serviceCatalog.find((s) => s.id === idOrKey);
+            if (found) {
+                setItemForm({
+                    ...itemForm,
+                    title: found.title,
+                    rate: Number(found.rate || 0),
+                });
+            }
+        } else {
+            const found = (foodCatalog || []).find((f) => f.id === idOrKey);
+            if (found) {
+                setItemForm({
+                    ...itemForm,
+                    title: found.title,
+                    rate: Number(found.rate || 0),
+                });
+            }
+        }
+    };
+
     return (
         <>
             {/* -------- Item Modal (Service/Food) -------- */}
@@ -59,14 +109,55 @@ export default function ReservationModals() {
                         </div>
 
                         <div className="space-y-3">
+                            {/* Title → Dropdown fed by Supabase catalogs */}
                             <div>
-                                <label className="text-sm text-slate-600">Title</label>
-                                <input
-                                    value={itemForm.title}
-                                    onChange={(e) => setItemForm({ ...itemForm, title: e.target.value })}
-                                    className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                                />
+                                <label className="text-sm text-slate-600">
+                                    {itemMode === 'service' ? 'Service' : 'Food'}
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        disabled={catalogLoading}
+                                        value={(itemMode === 'service'
+                                            ? (serviceCatalog.find(s => s.title === itemForm.title)?.id || '')
+                                            : ((foodCatalog || []).find(f => f.title === itemForm.title)?.id || '')
+                                        )}
+                                        onChange={(e) => handlePickCatalogItem(e.target.value)}
+                                        className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                                    >
+                                        <option value="">
+                                            {catalogLoading ? 'Loading…' : `Select ${itemMode === 'service' ? 'a service' : 'a food item'}`}
+                                        </option>
+
+                                        {itemMode === 'service' ? (
+                                            // Simple flat list for services
+                                            (serviceCatalog || []).map((s) => (
+                                                <option key={s.id} value={s.id}>
+                                                    {s.title} — {currencyLKR(s.rate)}
+                                                </option>
+                                            ))
+                                        ) : (
+                                            // Foods grouped by category
+                                            foodGroups.map((g) => (
+                                                <optgroup key={g.category} label={g.category}>
+                                                    {g.items.map((f) => (
+                                                        <option key={f.id} value={f.id}>
+                                                            {f.title} — {currencyLKR(f.rate)}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            ))
+                                        )}
+                                    </select>
+
+                                    {/* tiny inline loader to keep things smooth */}
+                                    {catalogLoading && (
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 animate-pulse text-xs">
+                                            <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-sm text-slate-600">Qty</label>
@@ -107,7 +198,7 @@ export default function ReservationModals() {
                             <button
                                 onClick={saveItem}
                                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-                                disabled={!itemForm.title || itemForm.amount <= 0}
+                                disabled={!itemForm.title || itemForm.amount <= 0 || catalogLoading}
                             >
                                 Save
                             </button>
