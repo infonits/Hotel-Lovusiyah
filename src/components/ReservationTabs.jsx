@@ -38,37 +38,7 @@ export default function ReservationTabs() {
         setItemModalOpen(true);
     };
 
-    const QuickAdd = ({ mode }) => {
-        const list = mode === 'service' ? serviceCatalog : foodCatalog;
 
-        if (catalogLoading) {
-            return (
-                <div className="mt-4 flex flex-wrap gap-2 items-center">
-                    <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin text-slate-500" />
-                    <span className="text-sm text-slate-500">Loading {mode === 'service' ? 'services' : 'menus'}…</span>
-                </div>
-            );
-        }
-
-        if (!list?.length) return null;
-
-        return (
-            <div className="mt-4 flex flex-wrap gap-2">
-                {list.map((it) => (
-                    <button
-                        key={`${mode}-${it.id}`}
-                        onClick={() => handleQuickAdd(mode, it)}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm hover:bg-slate-50 flex items-center gap-2"
-                        title={`Add ${it.title}`}
-                    >
-                        <Icon icon={mode === 'service' ? 'lucide:concierge-bell' : 'lucide:utensils'} className="w-4 h-4" />
-                        <span>{it.title}</span>
-                        <span className="text-slate-500">· {currencyLKR(it.rate)}</span>
-                    </button>
-                ))}
-            </div>
-        );
-    };
 
     return (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mt-6">
@@ -106,9 +76,7 @@ export default function ReservationTabs() {
                 )}
             </div>
 
-            {/* Quick add chips */}
-            {tab === 'services' && <QuickAdd mode="service" />}
-            {tab === 'foods' && <QuickAdd mode="food" />}
+
 
             {/* Services table */}
             {tab === 'services' && (

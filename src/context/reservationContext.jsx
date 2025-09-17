@@ -351,8 +351,8 @@ export function ReservationProvider({ initialReservation, children }) {
         const res = initialReservation || {};
         const n = nights;
 
-        doc.setFontSize(16);
-        doc.text('Hotel Lovusiyah / Invoice', 14, 16);
+        doc.setFontSize(22);
+        doc.text('Hotel Lovusiyah ', 14, 16);
         doc.setFontSize(10);
         // doc.text(`Reservation: ${res.code || '-'}`, 14, 22);
         doc.text(`Date: ${dayjs().format('YYYY-MM-DD HH:mm')}`, 200 - 14, 22, { align: 'right' });
@@ -436,7 +436,7 @@ export function ReservationProvider({ initialReservation, children }) {
 
         autoTable(doc, {
             startY: y + 6,
-            head: [['Label', 'Amount (LKR)']],
+            head: [['Description', 'Amount (LKR)']],
             body: [
                 ['Room Charges', Number(roomCharges).toFixed(2)],
                 ['Other Charges', Number(otherCharges).toFixed(2)],
@@ -446,7 +446,10 @@ export function ReservationProvider({ initialReservation, children }) {
             ],
             theme: 'plain',
             styles: { fontSize: 10 },
-            columnStyles: { 1: { halign: 'right' } },
+            columnStyles: {
+                0: { halign: 'left' },   // first column
+                1: { halign: 'right' },  // second column
+            },
         });
 
         // doc.save(`${res.code || 'reservation'}.pdf`);

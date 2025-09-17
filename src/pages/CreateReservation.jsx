@@ -27,9 +27,15 @@ function Stepper({ step }) {
                 return (
                     <div
                         key={s.key}
-                        className={`p-4 rounded-xl border bg-white/70 backdrop-blur-sm shadow-sm flex items-center gap-3
-              ${active ? 'border-slate-300' : 'border-white/20'} ${completed ? 'opacity-80' : ''}`}
+                        className={`p-4 rounded-xl border backdrop-blur-sm shadow-sm flex items-center gap-3
+    ${completed
+                                ? 'opacity-80 border-slate-300 bg-green-200'
+                                : active
+                                    ? 'border-slate-300 bg-amber-200'
+                                    : 'border-white/20 bg-white/70'
+                            }`}
                     >
+
                         <div className={`p-2 rounded-full ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}>
                             <Icon icon={s.icon} className="w-5 h-5" />
                         </div>
