@@ -211,6 +211,41 @@ export default function Reports() {
         <div className="text-center text-slate-500">Loading reports...</div>
       ) : (
         <>
+
+          {/* Filters + Export */}
+          <div className="bg-yellow-50 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              <div className="flex flex-wrap gap-4">
+                <input
+                  type="date"
+                  value={range.from}
+                  onChange={(e) => setRange((prev) => ({ ...prev, from: e.target.value }))}
+                  className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                />
+                <input
+                  type="date"
+                  value={range.to}
+                  onChange={(e) => setRange((prev) => ({ ...prev, to: e.target.value }))}
+                  className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={exportPaymentsCSV} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                  <Icon icon="lucide:download" className="w-4 h-4" /> Payments CSV
+                </button>
+                <button onClick={exportExpensesCSV} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                  <Icon icon="lucide:download" className="w-4 h-4" /> Expenses CSV
+                </button>
+                <button onClick={exportLedgerCSV} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-slate-700 hover:bg-slate-800 text-white shadow-sm">
+                  <Icon icon="lucide:download" className="w-4 h-4" /> Ledger CSV
+                </button>
+                <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-sm">
+                  <Icon icon="lucide:file" className="w-4 h-4" /> Export PDF
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Date + Net Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="p-4 rounded-xl border border-white/20 bg-white/70 backdrop-blur-sm shadow-sm">
@@ -250,39 +285,7 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* Filters + Export */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-              <div className="flex flex-wrap gap-4">
-                <input
-                  type="date"
-                  value={range.from}
-                  onChange={(e) => setRange((prev) => ({ ...prev, from: e.target.value }))}
-                  className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
-                />
-                <input
-                  type="date"
-                  value={range.to}
-                  onChange={(e) => setRange((prev) => ({ ...prev, to: e.target.value }))}
-                  className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={exportPaymentsCSV} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
-                  <Icon icon="lucide:download" className="w-4 h-4" /> Payments CSV
-                </button>
-                <button onClick={exportExpensesCSV} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-                  <Icon icon="lucide:download" className="w-4 h-4" /> Expenses CSV
-                </button>
-                <button onClick={exportLedgerCSV} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-slate-700 hover:bg-slate-800 text-white shadow-sm">
-                  <Icon icon="lucide:download" className="w-4 h-4" /> Ledger CSV
-                </button>
-                <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-sm">
-                  <Icon icon="lucide:file" className="w-4 h-4" /> Export PDF
-                </button>
-              </div>
-            </div>
-          </div>
+
 
           {/* ✅ KPI glance cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

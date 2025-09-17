@@ -180,10 +180,10 @@ export default function Rooms() {
     return (
         <div className="flex-1 p-8 overflow-y-auto">
             {/* Top bar */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
+            <div className="bg-yellow-50 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
                 <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
                     <div className="relative flex-1 max-w-md">
-                        <Icon icon="lucide:search" width="20" height="20" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                        <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" width="20" height="20" />
                         <input
                             type="text"
                             placeholder="Search rooms..."
@@ -206,7 +206,7 @@ export default function Rooms() {
                         </button>
                         <div className="text-sm text-slate-600">
                             <span>
-                                {loading ? 'Loading…' : `Showing ${paginatedData.length} of ${filteredRooms.length} rooms`}
+                                {loading && 'Loading…'}
                             </span>
                         </div>
                     </div>

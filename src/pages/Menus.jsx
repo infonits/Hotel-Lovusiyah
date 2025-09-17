@@ -145,12 +145,12 @@ export default function MenusPage() {
     return (
         <div className="flex-1 p-8 overflow-y-auto">
             {/* Filters & Add (kept same) */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
+            <div className="bg-yellow-50 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
                 <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                     <div className="flex flex-col xl:flex-row gap-4 w-full">
                         {/* Search */}
                         <div className="relative flex-1 max-w-xl">
-                            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="20" height="20" />
+                            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" width="20" height="20" />
                             <input
                                 type="text"
                                 placeholder="Search menu by name or description..."
@@ -174,11 +174,11 @@ export default function MenusPage() {
                     </div>
 
                     <button
-                        onClick={() => { setShowAddForm(true); setEditingId(null); setNewItem({ name: '', category: 'Breakfast', price: '', description: '' }); }}
-                        className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800"
+                        className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 whitespace-nowrap"
                     >
                         <Icon icon="lucide:plus" className="w-4 h-4" /> Add Menu Item
                     </button>
+
                 </div>
 
                 {loading && <div className="mt-3 text-sm text-slate-600">Loading…</div>}

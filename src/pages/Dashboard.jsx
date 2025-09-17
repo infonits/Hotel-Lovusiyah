@@ -79,29 +79,29 @@ export default function HotelDashboard() {
     return (
         <div className="min-h-screen flex font-inter bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20">
             {/* Sidebar */}
-            <aside className="w-65 h-screen sticky top-0 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col">
+            <aside className="w-65 h-screen sticky top-0 bg-gray-900 backdrop-blur-xl border-r border-slate-200/60 flex flex-col">
                 <div className="p-6 border-b border-slate-200/60">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-slate-800 to-slate-600 rounded-xl flex items-center justify-center">
-                            <Icon icon="lucide:building" className="text-white" width="20" height="20" />
+                        <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center">
+                            <Icon icon="lucide:building" className="text-black" width="20" height="20" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-semibold text-slate-800">Hotel Lovusiyah</h1>
-                            <p className="text-base text-slate-500">
+                            <h1 className="text-xl font-semibold text-white">Hotel Lovusiyah</h1>
+                            <p className="text-base text-gray-300">
                                 {time.toLocaleTimeString()}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <nav className="flex-1 px-6 space-y-2">
+                <nav className="flex-1 px-6 mt-3 space-y-2">
                     {navItems.map((item) => (
                         <Link
                             key={item.label}
                             to={item.href}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === item.href
-                                ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/25'
-                                : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'
+                                ? 'bg-yellow-500 text-slate-900 shadow-lg shadow-slate-900/25'
+                                : ' text-white hover:bg-slate-100/70 hover:text-slate-800'
                                 }`}
                         >
                             <Icon icon={item.icon} width="18" height="18" />
@@ -110,15 +110,15 @@ export default function HotelDashboard() {
                     ))}
                 </nav>
                 <div className='flex-1 px-6 py-2 space-y-2'>
-                    <hr className='border-gray-300' />
+                    <hr className='border-gray-500' />
 
-                    <span onClick={toggleFullscreen} className='cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'>
+                    <span onClick={toggleFullscreen} className='cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-white hover:bg-slate-100/70 hover:text-slate-800'>
                         <Icon icon="mingcute:fullscreen-line" width="18" height="18" />
 
                         FullScreen</span>
                 </div>
                 {/* Dropdown Trigger */}
-                <div className='px-6'>
+                <div className='px-6 my-2'>
                     <div
                         className="rounded-xl bg-gradient-to-r from-slate-600 to-slate-800 flex items-center px-3 cursor-pointer"
                         onClick={() => logout()}
@@ -130,9 +130,9 @@ export default function HotelDashboard() {
                     </div>
 
                 </div>
-                <div className="px-6 border-t border-slate-200/60 py-2">
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-3 text-white">
-                        <p className="text-xs text-emerald-100 mb-3">Infonits Product</p>
+                <div className="px-6 border-t border-slate-500/60 py-2">
+                    <div className="bg-gradient-to-r from-blue-900 to-blue-950 rounded-xl p-3 text-white">
+                        <p className="text-xs text-emerald-100">Dev by Infonits © 2025</p>
                     </div>
                 </div>
             </aside>

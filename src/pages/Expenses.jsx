@@ -112,6 +112,56 @@ export default function Expenses() {
     /* ---------------- Render ---------------- */
     return (
         <div className="flex-1 p-8 overflow-y-auto">
+            {/* Filters */}
+            <div className="bg-yellow-50 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
+                <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-4 flex-1">
+                        <div className="relative flex-1 max-w-md">
+                            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" width="20" height="20" />
+
+                            <input
+                                type="text"
+                                placeholder="Search expenses..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm border-slate-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring focus:ring-emerald-100"
+                            />
+                        </div>
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring focus:ring-emerald-100"
+                        >
+                            {categories.map((c) => (
+                                <option key={c}>{c}</option>
+                            ))}
+                        </select>
+                        <input
+                            type="date"
+                            value={dateFilter.from}
+                            onChange={(e) =>
+                                setDateFilter((prev) => ({ ...prev, from: e.target.value }))
+                            }
+                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                        />
+                        <input
+                            type="date"
+                            value={dateFilter.to}
+                            onChange={(e) =>
+                                setDateFilter((prev) => ({ ...prev, to: e.target.value }))
+                            }
+                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-slate-900 hover:bg-slate-950 text-white shadow-sm"
+                    >
+                        <Icon icon="lucide:plus" className="w-4 h-4" />
+                        New Expense
+                    </button>
+                </div>
+            </div>
             {/* Top Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div className="p-4 rounded-xl border border-white/20 bg-white/70 backdrop-blur-sm shadow-sm">
@@ -155,52 +205,7 @@ export default function Expenses() {
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
-                <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-                    <div className="flex flex-col sm:flex-row flex-wrap gap-4 flex-1">
-                        <input
-                            type="text"
-                            placeholder="Search expenses..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring focus:ring-emerald-100"
-                        />
-                        <select
-                            value={categoryFilter}
-                            onChange={(e) => setCategoryFilter(e.target.value)}
-                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring focus:ring-emerald-100"
-                        >
-                            {categories.map((c) => (
-                                <option key={c}>{c}</option>
-                            ))}
-                        </select>
-                        <input
-                            type="date"
-                            value={dateFilter.from}
-                            onChange={(e) =>
-                                setDateFilter((prev) => ({ ...prev, from: e.target.value }))
-                            }
-                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
-                        />
-                        <input
-                            type="date"
-                            value={dateFilter.to}
-                            onChange={(e) =>
-                                setDateFilter((prev) => ({ ...prev, to: e.target.value }))
-                            }
-                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
-                        />
-                    </div>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                    >
-                        <Icon icon="lucide:plus" className="w-4 h-4" />
-                        New Expense
-                    </button>
-                </div>
-            </div>
+
 
             {/* Table */}
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm overflow-hidden">
