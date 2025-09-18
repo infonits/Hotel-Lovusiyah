@@ -14,11 +14,13 @@ export function ReservationProvider({ initialReservation, children }) {
     const [serviceCatalog, setServiceCatalog] = useState([]); // [{id,title,rate}]
     const [foodCatalog, setFoodCatalog] = useState([]);       // [{id,title,rate,category}]
     const [catalogLoading, setCatalogLoading] = useState(true);
-
+    const [reservation, setReservation] = useState(initialReservation);
+    const [canceling, setCanceling] = useState(false);
     // Items persisted in Supabase (TWO TABLES)
     const [services, setServices] = useState([]); // [{_id,title,qty,rate,amount}]
     const [foods, setFoods] = useState([]);       // [{_id,title,qty,rate,amount}]
     const [itemsLoading, setItemsLoading] = useState(true);
+    const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
     // Payments (persisted in Supabase)
     const [payments, setPayments] = useState([]);
@@ -455,10 +457,44 @@ export function ReservationProvider({ initialReservation, children }) {
         // doc.save(`${res.code || 'reservation'}.pdf`);
         doc.save(`reservation.pdf`);
     };
+    const handleCancel = async () => {
+
+
+        setCancelModalOpen(true);
+    };
+
+
+    const confirmCancel = async () => {
+
+        if (!reservation?.id || reservation?.status === 'cancelled') return;
+        setCanceling(true);
+        try {
+            const { data, error: upErr, } = await supabase
+                .from('reservations')
+                .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+                .eq('id', reservation.id);
+            if (upErr) { throw upErr } else if (data) {
+                console.log(data);
+
+            }
+
+            setReservation(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setCanceling(false);
+            setCancelModalOpen(false);
+        }
+    };
 
     const value = {
         currencyLKR,
-        initialReservation,
+        reservation,
+        canceling,
+
+        // cancellation
+        cancelModalOpen, setCancelModalOpen,
+        handleCancel, confirmCancel,
 
         // catalogs + loaders
         serviceCatalog, foodCatalog, catalogLoading,
@@ -483,6 +519,7 @@ export function ReservationProvider({ initialReservation, children }) {
         openAddPayment, openEditPayment, savePayment, deletePayment,
         handlePrint,
     };
+
 
     return <ReservationContext.Provider value={value}>{children}</ReservationContext.Provider>;
 }

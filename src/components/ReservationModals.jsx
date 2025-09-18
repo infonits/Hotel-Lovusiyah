@@ -1,13 +1,18 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { useReservation } from '../context/reservationContext';
 
 export default function ReservationModals() {
     const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
 
+
+
+
     const {
+        cancelModalOpen, setCancelModalOpen, confirmCancel, canceling,
+
         // catalogs from Supabase (provided by ReservationProvider)
         serviceCatalog,   // [{ id, title, rate }]
         foodCatalog,      // [{ id, title, rate, category }]
@@ -277,6 +282,32 @@ export default function ReservationModals() {
                                 disabled={paymentForm.amount <= 0}
                             >
                                 Save
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            )}
+            {cancelModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm animate-fadeIn">
+                        <h3 className="text-lg font-semibold mb-2">Cancel Reservation?</h3>
+                        <p className="text-sm text-slate-600 mb-4">
+                            This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setCancelModalOpen(false)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                            >
+                                No
+                            </button>
+                            <button
+                                onClick={confirmCancel}
+                                disabled={canceling}
+                                className={`px-3 py-1.5 rounded-lg text-white shadow-sm ${canceling ? 'bg-slate-400' : 'bg-red-600 hover:bg-red-700'}`}
+                            >
+                                {canceling ? 'Cancelling…' : 'Yes, Cancel'}
                             </button>
                         </div>
                     </div>

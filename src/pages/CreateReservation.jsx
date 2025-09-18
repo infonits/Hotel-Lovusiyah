@@ -579,18 +579,32 @@ export default function CreateReservation() {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            // 1) Insert reservation
+            // 🔹 1) Get the last reservation_number
+            const { data: lastRes, error: lastErr } = await supabase
+                .from('reservations')
+                .select('reservation_number')
+                .order('reservation_number', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (lastErr) throw lastErr;
+
+            const newNumber = (lastRes?.reservation_number || 0) + 1;
+
+            // 🔹 2) Insert reservation with reservation_number
             const { data: resv, error: resvErr } = await supabase
                 .from('reservations')
                 .insert({
+                    reservation_number: newNumber,  // ✅ assign sequential number
                     check_in_date: dates.from,
                     check_out_date: dates.to,
                     special_requests: specialRequests || null,
-                    notes: notes || null, // can include vehicle number text
+                    notes: notes || null,
                     estimated_total: roomTotal,
                 })
-                .select('id')
+                .select('id, reservation_number')
                 .single();
+
             if (resvErr) throw resvErr;
 
             const reservationId = resv.id;

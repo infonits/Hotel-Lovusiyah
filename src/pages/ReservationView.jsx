@@ -13,6 +13,7 @@ export default function ReservationView() {
     const [loading, setLoading] = useState(true);
     const [initialReservation, setInitialReservation] = useState(null);
     const [error, setError] = useState(null);
+
     useEffect(() => {
         let alive = true;
 
@@ -29,7 +30,7 @@ export default function ReservationView() {
                 const { data, error } = await supabase
                     .from('reservations')
                     .select(`
-          id,  notes, check_in_date, check_out_date,
+           id,  notes, check_in_date, check_out_date, reservation_number, status, cancelled_at,
           reservation_rooms (
             rooms ( id, number, type, price )
           ),
@@ -75,12 +76,15 @@ export default function ReservationView() {
 
                 setInitialReservation({
                     id: data.id,
-                    code: data.code || 'RES-XXXXXX',
+                    code: data.reservation_number
+                        ? `RES-${data.reservation_number.toString().padStart(6, '0')}`
+                        : 'RES-000000',
                     guest,
                     rooms,
                     checkInDate: data.check_in_date,
                     checkOutDate: data.check_out_date,
                     notes: data.notes || '',
+                    status: data.status || 'confirmed',
                 });
             } catch (e) {
                 console.error(e);
@@ -93,6 +97,7 @@ export default function ReservationView() {
 
         return () => { alive = false; };
     }, [id]);
+
 
 
     if (loading) {
@@ -134,10 +139,12 @@ export default function ReservationView() {
             </div>
         );
     }
-
     return (
         <ReservationProvider initialReservation={initialReservation}>
             <div className="flex-1 p-8 overflow-y-auto">
+                <div className="mb-4 flex justify-end">
+
+                </div>
                 <ReservationHeaderSummary />
                 <ReservationTabs />
                 <ReservationModals />
