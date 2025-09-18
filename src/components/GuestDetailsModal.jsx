@@ -1,18 +1,81 @@
-
+import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
+import dayjs from 'dayjs';
+import { supabase } from '../lib/supabse';
 
-// ===== Simple details modal (separate component) =====
 export default function GuestDetailsModal({ guest, onClose }) {
-    if (!guest) return null;
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    // Dummy stats (NOT from DB for now, as requested)
-    const dummy = {
-        totalBookings: 4,
-        lastBookingDate: '2025-08-20',
-        totalNights: 12,
-        lifetimeSpendLKR: 120000,
-        cancellations: 1,
-    };
+    useEffect(() => {
+        if (!guest?.id) return;
+
+        const fetchStats = async () => {
+            setLoading(true);
+            try {
+                // 1. Get reservations linked to this guest
+                const { data, error } = await supabase
+                    .from('reservation_guests')
+                    .select('reservations(id, check_in_date, check_out_date, status, estimated_total)')
+                    .eq('guest_id', guest.id);
+
+                if (error) throw error;
+
+                const reservations = data.map((d) => d.reservations);
+
+                if (!reservations.length) {
+                    setStats({
+                        totalBookings: 0,
+                        lastBookingDate: '-',
+                        totalNights: 0,
+                        lifetimeSpendLKR: 0,
+                        cancellations: 0,
+                    });
+                    return;
+                }
+
+                // 2. Calculate stats
+                const totalBookings = reservations.length;
+                const lastBookingDate = reservations
+                    .map((r) => r.check_in_date)
+                    .sort()
+                    .pop();
+
+                const totalNights = reservations.reduce((sum, r) => {
+                    if (r.check_in_date && r.check_out_date && r.status !== 'cancelled') {
+                        return sum + dayjs(r.check_out_date).diff(dayjs(r.check_in_date), 'day');
+                    }
+                    return sum;
+                }, 0);
+
+                const lifetimeSpendLKR = reservations.reduce((sum, r) => {
+                    if (r.status !== 'cancelled') {
+                        return sum + (r.estimated_total || 0);
+                    }
+                    return sum;
+                }, 0);
+
+
+                const cancellations = reservations.filter((r) => r.status === 'cancelled').length;
+
+                setStats({
+                    totalBookings,
+                    lastBookingDate: lastBookingDate ? dayjs(lastBookingDate).format('YYYY-MM-DD') : '-',
+                    totalNights,
+                    lifetimeSpendLKR,
+                    cancellations,
+                });
+            } catch (e) {
+                console.error('Failed to fetch guest stats:', e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, [guest]);
+
+    if (!guest) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -62,7 +125,7 @@ export default function GuestDetailsModal({ guest, onClose }) {
                         </div>
                         <div>
                             <p className="text-sm text-slate-500">Created</p>
-                            <p className="font-medium text-slate-800">{guest.createdAt || '-'}</p>
+                            <p className="font-medium text-slate-800">{guest.created_at || '-'}</p>
                         </div>
                     </div>
 
@@ -88,25 +151,35 @@ export default function GuestDetailsModal({ guest, onClose }) {
                         <p className="font-medium text-slate-800">{guest.notes || '-'}</p>
                     </div>
 
-                    {/* Dummy stats */}
-                    <div className="grid md:grid-cols-4 gap-4">
-                        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-                            <p className="text-xs text-slate-500">Total Bookings</p>
-                            <p className="text-xl font-semibold text-slate-800">{dummy.totalBookings}</p>
+                    {/* Stats */}
+                    {loading ? (
+                        <p className="text-sm text-slate-500">Loading stats…</p>
+                    ) : (
+                        <div className="grid md:grid-cols-5 gap-4">
+                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                                <p className="text-xs text-slate-500">Total Bookings</p>
+                                <p className="text-xl font-semibold text-slate-800">{stats.totalBookings}</p>
+                            </div>
+                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                                <p className="text-xs text-slate-500">Last Booking</p>
+                                <p className="text-sm font-medium text-slate-800">{stats.lastBookingDate}</p>
+                            </div>
+                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                                <p className="text-xs text-slate-500">Total Nights</p>
+                                <p className="text-xl font-semibold text-slate-800">{stats.totalNights}</p>
+                            </div>
+                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                                <p className="text-xs text-slate-500">Lifetime Spend</p>
+                                <p className="text-sm font-semibold text-slate-800">
+                                    LKR {stats.lifetimeSpendLKR.toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                                <p className="text-xs text-slate-500">Cancellations</p>
+                                <p className="text-xl font-semibold text-slate-800">{stats.cancellations}</p>
+                            </div>
                         </div>
-                        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-                            <p className="text-xs text-slate-500">Last Booking</p>
-                            <p className="text-sm font-medium text-slate-800">{dummy.lastBookingDate}</p>
-                        </div>
-                        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-                            <p className="text-xs text-slate-500">Total Nights</p>
-                            <p className="text-xl font-semibold text-slate-800">{dummy.totalNights}</p>
-                        </div>
-                        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-                            <p className="text-xs text-slate-500">Lifetime Spend</p>
-                            <p className="text-sm font-semibold text-slate-800">LKR {dummy.lifetimeSpendLKR.toLocaleString()}</p>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
