@@ -16,8 +16,7 @@ const steps = [
     { key: 3, label: 'Extras & Review', icon: 'lucide:sticky-note' },
 ];
 
-/* ---------- Hoisted child components (unchanged design) ---------- */
-
+/* ---------- Stepper ---------- */
 function Stepper({ step }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
@@ -28,14 +27,13 @@ function Stepper({ step }) {
                     <div
                         key={s.key}
                         className={`p-4 rounded-xl border backdrop-blur-sm shadow-sm flex items-center gap-3
-    ${completed
+              ${completed
                                 ? 'opacity-80 border-slate-300 bg-green-200'
                                 : active
                                     ? 'border-slate-300 bg-amber-200'
                                     : 'border-white/20 bg-white/70'
                             }`}
                     >
-
                         <div className={`p-2 rounded-full ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}>
                             <Icon icon={s.icon} className="w-5 h-5" />
                         </div>
@@ -50,6 +48,7 @@ function Stepper({ step }) {
     );
 }
 
+/* ---------- Step 1 ---------- */
 function DatesAndRooms({
     dates,
     setDates,
@@ -69,7 +68,16 @@ function DatesAndRooms({
                     <input
                         type="date"
                         value={dates.from}
-                        onChange={(e) => setDates((d) => ({ ...d, from: e.target.value }))}
+                        onChange={(e) => {
+                            const newFrom = e.target.value;
+                            let newTo = dates.to;
+                            // if no checkout yet, or checkout <= new checkin, push checkout forward
+                            if (!newTo || dayjs(newTo).diff(newFrom, 'day') <= 0) {
+                                newTo = dayjs(newFrom).add(1, 'day').format('YYYY-MM-DD');
+                            }
+                            setDates({ from: newFrom, to: newTo });
+                        }}
+
                         className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
                     />
                 </div>
@@ -78,14 +86,25 @@ function DatesAndRooms({
                     <input
                         type="date"
                         value={dates.to}
-                        onChange={(e) => setDates((d) => ({ ...d, to: e.target.value }))}
+                        onChange={(e) => {
+                            let newTo = e.target.value;
+                            let newFrom = dates.from;
+                            // if checkout <= checkin, pull checkin back one day before new checkout
+                            if (dayjs(newTo).diff(newFrom, 'day') <= 0) {
+                                newFrom = dayjs(newTo).subtract(1, 'day').format('YYYY-MM-DD');
+                            }
+                            setDates({ from: newFrom, to: newTo });
+                        }}
+
                         className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
                     />
                 </div>
                 <div className="flex items-end">
                     <div className="w-full p-3 rounded-lg border border-slate-200 bg-slate-50/50">
                         <div className="text-xs text-slate-500">Nights</div>
-                        <div className="font-semibold text-slate-800">{totalNights}</div>
+                        <div className="font-semibold text-slate-800">
+                            {totalNights} ({dayjs(dates.from).format('MMM D')} → {dayjs(dates.to).format('MMM D')})
+                        </div>
                     </div>
                 </div>
             </div>
@@ -149,6 +168,7 @@ function DatesAndRooms({
     );
 }
 
+/* ---------- Step 2 ---------- */
 function GuestDetails({
     nic,
     setNic,
@@ -195,21 +215,70 @@ function GuestDetails({
                             <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" /> Searching…
                         </div>
                     )}
-                    {guestFound === true && <div className="text-sm text-emerald-700 mt-2">Existing guest loaded.</div>}
-                    {guestFound === false && (
-                        <div className="text-sm text-slate-500 mt-2">No existing guest. Please fill details below.</div>
-                    )}
+                    {guestFound === true && <div className="text-sm text-emerald-700 mt-2">Existing guest loaded & added.</div>}
+                    {guestFound === false && <div className="text-sm text-slate-500 mt-2">No existing guest. Please fill details below.</div>}
                 </div>
             </div>
-            <button
-                type="button"
-                onClick={handleAddGuest}
-                disabled={!currentGuest.name || !currentGuest.nicNumber}
-                className="mt-6 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-            >
-                Add Guest to Reservation
-            </button>
 
+            {/* Show form only for new guest */}
+            {guestFound === false && (
+                <>
+                    <div className="grid sm:grid-cols-2 gap-4 mt-6">
+                        <div>
+                            <label className="text-sm text-slate-600">Full Name</label>
+                            <input
+                                value={currentGuest.name || ''}
+                                onChange={(e) => setCurrentGuest((g) => ({ ...g, name: e.target.value }))}
+                                className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-slate-600">NIC</label>
+                            <input
+                                value={currentGuest.nicNumber}
+                                onChange={(e) => setCurrentGuest((g) => ({ ...g, nicNumber: e.target.value }))}
+                                className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-slate-600">Phone</label>
+                            <input
+                                value={currentGuest.phone || ''}
+                                onChange={(e) => setCurrentGuest((g) => ({ ...g, phone: e.target.value }))}
+                                className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-slate-600">Email</label>
+                            <input
+                                type="email"
+                                value={currentGuest.email || ''}
+                                onChange={(e) => setCurrentGuest((g) => ({ ...g, email: e.target.value }))}
+                                className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                            />
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="text-sm text-slate-600">Address</label>
+                            <input
+                                value={currentGuest.address || ''}
+                                onChange={(e) => setCurrentGuest((g) => ({ ...g, address: e.target.value }))}
+                                className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleAddGuest}
+                        disabled={!currentGuest.name || !currentGuest.nicNumber}
+                        className="mt-6 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                    >
+                        Add Guest to Reservation
+                    </button>
+                </>
+            )}
+
+            {/* Added guests list */}
             {guests.length > 0 && (
                 <div className="mt-6">
                     <h4 className="text-slate-700 font-semibold mb-2">Added Guests:</h4>
@@ -217,9 +286,7 @@ function GuestDetails({
                         {guests.map((g, idx) => (
                             <li key={idx} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border">
                                 <div>
-                                    <div className="font-medium text-slate-800">
-                                        {g.name} ({g.nicNumber})
-                                    </div>
+                                    <div className="font-medium text-slate-800">{g.name} ({g.nicNumber})</div>
                                     <div className="text-sm text-slate-600">
                                         {g.phone} · {g.email}
                                     </div>
@@ -232,50 +299,6 @@ function GuestDetails({
                     </ul>
                 </div>
             )}
-
-            <div className="grid sm:grid-cols-2 gap-4 mt-6">
-                <div>
-                    <label className="text-sm text-slate-600">Full Name</label>
-                    <input
-                        value={currentGuest.name || ''}
-                        onChange={(e) => setCurrentGuest((g) => ({ ...g, name: e.target.value }))}
-                        className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                    />
-                </div>
-                <div>
-                    <label className="text-sm text-slate-600">NIC</label>
-                    <input
-                        value={currentGuest.nicNumber}
-                        onChange={(e) => setCurrentGuest((g) => ({ ...g, nicNumber: e.target.value }))}
-                        className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                    />
-                </div>
-                <div>
-                    <label className="text-sm text-slate-600">Phone</label>
-                    <input
-                        value={currentGuest.phone || ''}
-                        onChange={(e) => setCurrentGuest((g) => ({ ...g, phone: e.target.value }))}
-                        className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                    />
-                </div>
-                <div>
-                    <label className="text-sm text-slate-600">Email</label>
-                    <input
-                        type="email"
-                        value={currentGuest.email || ''}
-                        onChange={(e) => setCurrentGuest((g) => ({ ...g, email: e.target.value }))}
-                        className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                    />
-                </div>
-                <div className="sm:col-span-2">
-                    <label className="text-sm text-slate-600">Address</label>
-                    <input
-                        value={currentGuest.address || ''}
-                        onChange={(e) => setCurrentGuest((g) => ({ ...g, address: e.target.value }))}
-                        className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                    />
-                </div>
-            </div>
 
             <div className="mt-6 flex items-center justify-between">
                 <button
@@ -297,6 +320,7 @@ function GuestDetails({
     );
 }
 
+/* ---------- Step 3 (unchanged from your code) ---------- */
 function ExtrasAndReview({
     dates,
     totalNights,
@@ -406,8 +430,7 @@ function ExtrasAndReview({
     );
 }
 
-/* ----------------------- Parent component ----------------------- */
-
+/* ----------------------- Parent ----------------------- */
 export default function CreateReservation() {
     const today = dayjs().format('YYYY-MM-DD');
     const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
@@ -423,7 +446,7 @@ export default function CreateReservation() {
 
     // Step 2
     const [nic, setNic] = useState('');
-    const [guests, setGuests] = useState([]); // [{ id?, name, nicNumber, phone, email, address }]
+    const [guests, setGuests] = useState([]);
     const [currentGuest, setCurrentGuest] = useState({ id: null, name: '', nicNumber: '', phone: '', email: '', address: '' });
     const [guestLoading, setGuestLoading] = useState(false);
     const [guestFound, setGuestFound] = useState(null);
@@ -443,19 +466,16 @@ export default function CreateReservation() {
         [selectedRooms, totalNights]
     );
 
-    /* ---------- Data access: Rooms availability from DB ---------- */
-
+    /* ---------- Data access: Rooms availability ---------- */
     const fetchAvailableRooms = async (fromDate, toDate) => {
         setLoadingRooms(true);
         try {
-            // 1) Get all rooms
             const { data: rooms, error: roomsErr } = await supabase
                 .from('rooms')
                 .select('id, number, type, capacity, price')
                 .order('number', { ascending: true });
             if (roomsErr) throw roomsErr;
 
-            // If dates invalid, just show nothing
             const validRange =
                 fromDate && toDate && dayjs(toDate).diff(dayjs(fromDate), 'day') > 0;
 
@@ -466,7 +486,6 @@ export default function CreateReservation() {
                 return;
             }
 
-            // 2) Get booked room_ids in range via RPC (includes room_blocks)
             const { data: booked, error: bookedErr } = await supabase.rpc(
                 'fn_booked_room_ids',
                 { from_date: fromDate, to_date: toDate }
@@ -474,12 +493,9 @@ export default function CreateReservation() {
             if (bookedErr) throw bookedErr;
 
             const bookedIds = new Set((booked || []).map((r) => r.room_id));
-
-            // 3) Filter available
             const available = (rooms || []).filter((r) => !bookedIds.has(r.id));
             setAvailableRooms(available);
 
-            // prune any selected id that is no longer available
             setSelectedRoomIds((prev) => prev.filter((id) => available.some((r) => r.id === id)));
         } catch (e) {
             console.error(e);
@@ -489,35 +505,34 @@ export default function CreateReservation() {
         }
     };
 
-    // Load availability when dates change
     useEffect(() => {
         fetchAvailableRooms(dates.from, dates.to);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dates.from, dates.to]);
 
-    /* ---------- Step 2: Find guest by NIC (DB) ---------- */
-
+    /* ---------- Step 2: Find guest ---------- */
     const handleFindGuest = async () => {
         if (!nic.trim()) return;
         setGuestLoading(true);
         try {
-            // strict match on NIC
             const { data: gData, error } = await supabase
                 .from('guests')
                 .select('id, name, nic, phone, email, address')
                 .eq('nic', nic.trim())
                 .maybeSingle();
-            if (error && error.code !== 'PGRST116') throw error; // ignore "no rows" error
+            if (error && error.code !== 'PGRST116') throw error;
 
             if (gData) {
-                setCurrentGuest({
+                const existingGuest = {
                     id: gData.id,
                     name: gData.name || '',
                     nicNumber: gData.nic || '',
                     phone: gData.phone || '',
                     email: gData.email || '',
                     address: gData.address || '',
-                });
+                };
+                setCurrentGuest(existingGuest);
+                setGuests((prev) => [...prev, existingGuest]);
                 setGuestFound(true);
             } else {
                 setCurrentGuest({
@@ -538,14 +553,10 @@ export default function CreateReservation() {
         }
     };
 
-    /* ---------- Step 3: Submit (create reservation + links) ---------- */
-
-    // Ensure a guest exists by NIC (returns guest id)
+    /* ---------- Step 3: Submit ---------- */
     const ensureGuestByNIC = async (g) => {
-        // If already has id, assume it exists
         if (g.id) return g.id;
 
-        // Try find by NIC
         const { data: found, error: findErr } = await supabase
             .from('guests')
             .select('id')
@@ -554,7 +565,6 @@ export default function CreateReservation() {
         if (findErr && findErr.code !== 'PGRST116') throw findErr;
         if (found?.id) return found.id;
 
-        // Insert new guest
         const payload = {
             name: g.name || null,
             email: g.email || null,
@@ -579,23 +589,20 @@ export default function CreateReservation() {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            // 🔹 1) Get the last reservation_number
             const { data: lastRes, error: lastErr } = await supabase
                 .from('reservations')
                 .select('reservation_number')
                 .order('reservation_number', { ascending: false })
                 .limit(1)
                 .maybeSingle();
-
             if (lastErr) throw lastErr;
 
             const newNumber = (lastRes?.reservation_number || 0) + 1;
 
-            // 🔹 2) Insert reservation with reservation_number
             const { data: resv, error: resvErr } = await supabase
                 .from('reservations')
                 .insert({
-                    reservation_number: newNumber,  // ✅ assign sequential number
+                    reservation_number: newNumber,
                     check_in_date: dates.from,
                     check_out_date: dates.to,
                     special_requests: specialRequests || null,
@@ -604,12 +611,10 @@ export default function CreateReservation() {
                 })
                 .select('id, reservation_number')
                 .single();
-
             if (resvErr) throw resvErr;
 
             const reservationId = resv.id;
 
-            // 2) Insert reservation_rooms
             const roomRows = selectedRooms.map((r) => ({
                 reservation_id: reservationId,
                 room_id: r.id,
@@ -620,7 +625,6 @@ export default function CreateReservation() {
                 if (rrErr) throw rrErr;
             }
 
-            // 3) Ensure guests exist, then link
             const guestIds = [];
             for (const g of guests) {
                 const gid = await ensureGuestByNIC(g);
@@ -636,7 +640,6 @@ export default function CreateReservation() {
             }
 
             alert('Reservation created successfully.');
-            // Reset wizard
             setStep(1);
             setSelectedRoomIds([]);
             setSpecialRequests('');
