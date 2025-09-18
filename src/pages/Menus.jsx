@@ -174,6 +174,11 @@ export default function MenusPage() {
                     </div>
 
                     <button
+                        onClick={() => {
+                            setShowAddForm(true);
+                            setEditingId(null);
+                            setNewItem({ name: '', category: 'Breakfast', price: '', description: '' });
+                        }}
                         className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 whitespace-nowrap"
                     >
                         <Icon icon="lucide:plus" className="w-4 h-4" /> Add Menu Item
