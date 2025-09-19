@@ -4,10 +4,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { supabase } from '../lib/supabse';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { formatLKR } from '../utils/currency';
+import { toast } from 'react-toastify';
 
 /* ---------- Utils ---------- */
-const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
+
 const nightsBetween = (from, to) =>
     from && to ? Math.max(0, dayjs(to).diff(dayjs(from), 'day')) : 0;
 
@@ -225,7 +227,7 @@ function DatesAndRooms({
                             <div className="mt-1 text-sm text-slate-600">
                                 {r.type} · {r.capacity} pax
                             </div>
-                            <div className="mt-2 text-slate-800">{currencyLKR(r.price)} / night</div>
+                            <div className="mt-2 text-slate-800">{formatLKR(r.price)} / night</div>
                         </button>
                     );
                 })}
@@ -470,7 +472,7 @@ function ExtrasAndReview({
                                 {selectedRooms.map((r) => (
                                     <li key={r.id} className="flex items-center justify-between">
                                         <span className="text-slate-800">#{r.number} · {r.type}</span>
-                                        <span className="text-slate-800">{currencyLKR(r.price)} × {totalNights}</span>
+                                        <span className="text-slate-800">{formatLKR(r.price)} × {totalNights}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -491,7 +493,7 @@ function ExtrasAndReview({
 
                         <div className="mt-4 border-t border-slate-200 pt-3 flex items-center justify-between">
                             <div className="text-slate-600">Room Total</div>
-                            <div className="font-semibold text-slate-800">{currencyLKR(roomTotal)}</div>
+                            <div className="font-semibold text-slate-800">{formatLKR(roomTotal)}</div>
                         </div>
                     </div>
                 </div>
@@ -555,6 +557,7 @@ export default function CreateReservation() {
     const [notes, setNotes] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    const navigate = useNavigate()
     const totalNights = useMemo(() => nightsBetween(dates.from, dates.to), [dates]);
     const selectedRooms = useMemo(
         () => availableRooms.filter((r) => selectedRoomIds.includes(r.id)),
@@ -702,6 +705,7 @@ export default function CreateReservation() {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
+            // Get last reservation number
             const { data: lastRes, error: lastErr } = await supabase
                 .from('reservations')
                 .select('reservation_number')
@@ -712,6 +716,7 @@ export default function CreateReservation() {
 
             const newNumber = (lastRes?.reservation_number || 0) + 1;
 
+            // Insert reservation
             const { data: resv, error: resvErr } = await supabase
                 .from('reservations')
                 .insert({
@@ -728,6 +733,7 @@ export default function CreateReservation() {
 
             const reservationId = resv.id;
 
+            // Insert selected rooms
             const roomRows = selectedRooms.map((r) => ({
                 reservation_id: reservationId,
                 room_id: r.id,
@@ -738,6 +744,7 @@ export default function CreateReservation() {
                 if (rrErr) throw rrErr;
             }
 
+            // Insert guests (ensure they exist first)
             const guestIds = [];
             for (const g of guests) {
                 const gid = await ensureGuestByNIC(g);
@@ -752,19 +759,20 @@ export default function CreateReservation() {
                 if (rgErr) throw rgErr;
             }
 
-            alert('Reservation created successfully.');
-            setStep(1);
-            setSelectedRoomIds([]);
-            setSpecialRequests('');
-            setNotes('');
-            setGuests([]);
+            toast.success("Reservation created successfully 🎉", {
+                theme: "colored",
+            });
+            navigate(`/dashboard/reservations/${reservationId}`);
         } catch (e) {
             console.error(e);
-            alert('Failed to create reservation.');
+            toast.error('Failed to create reservation 😢', {
+                theme: "colored",
+            });
         } finally {
             setSubmitting(false);
         }
     };
+
 
     const canNextFromStep1 =
         dates.from && dates.to &&

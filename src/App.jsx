@@ -4,6 +4,9 @@ import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ProtectedRoute from './ProtectedRoute'
 import { AuthProvider } from './context/authContext'
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify'
+
 
 function App() {
   return (
@@ -24,6 +27,8 @@ function App() {
           />
         </Routes>
       </Router>
+      <ToastContainer position="top-right" autoClose={3000} />
+
     </AuthProvider>
   )
 }

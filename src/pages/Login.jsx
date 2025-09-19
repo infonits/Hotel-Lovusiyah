@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
+import { toast } from 'react-toastify';
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
@@ -18,8 +19,11 @@ export default function Login() {
                 navigate('/'); // go to Dashboard (protected)
             }
         } catch (err) {
-            // Keep UI unchanged: use alert for error (no extra UI elements added)
-            alert(err?.message || 'Login failed');
+            // Keep UI unchanged: use toast for error (no extra UI elements added)
+
+            toast.error('Login Failed', {
+                theme: "colored",
+            });
         }
     };
 
