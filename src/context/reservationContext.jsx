@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useMemo, useEffect, useState, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { supabase } from '../lib/supabse';
+import { formatLKR } from '../utils/currency';
 
 const ReservationContext = createContext(null);
 export const useReservation = () => useContext(ReservationContext);
@@ -356,7 +357,6 @@ export function ReservationProvider({ initialReservation, children }) {
         doc.setFontSize(22);
         doc.text('Hotel Lovusiyah ', 14, 16);
         doc.setFontSize(10);
-        // doc.text(`Reservation: ${res.code || '-'}`, 14, 22);
         doc.text(`Date: ${dayjs().format('YYYY-MM-DD HH:mm')}`, 200 - 14, 22, { align: 'right' });
 
         doc.setFontSize(12);
@@ -379,9 +379,9 @@ export function ReservationProvider({ initialReservation, children }) {
                 return [
                     (r.roomNumber || r.number || '—'),
                     (r.type || '—'),
-                    rate.toFixed(2),
+                    formatLKR(rate),
                     n,
-                    (n * rate).toFixed(2),
+                    formatLKR(n * rate),
                 ];
             }),
             theme: 'grid',
@@ -392,71 +392,81 @@ export function ReservationProvider({ initialReservation, children }) {
         let y = (doc.lastAutoTable?.finalY ?? 68) + 8;
 
         // Services
-        doc.text('Services', 14, y);
-        autoTable(doc, {
-            startY: y + 4,
-            head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-            body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
-                s.title, s.qty, Number(s.rate || 0).toFixed(2), Number(s.amount || 0).toFixed(2)
-            ]),
-            theme: 'grid',
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [15, 23, 42] },
-        });
+        if (services.length) {
+            doc.text('Services', 14, y);
+            autoTable(doc, {
+                startY: y + 4,
+                head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
+                body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
+                    s.title, s.qty, formatLKR(s.rate), formatLKR(s.amount)
+                ]),
+                theme: 'grid',
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [15, 23, 42] },
+            });
 
-        y = (doc.lastAutoTable?.finalY ?? y) + 8;
-
+            y = (doc.lastAutoTable?.finalY ?? y) + 8;
+        }
         // Foods
-        doc.text('Foods', 14, y);
-        autoTable(doc, {
-            startY: y + 4,
-            head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-            body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
-                f.title, f.qty, Number(f.rate || 0).toFixed(2), Number(f.amount || 0).toFixed(2)
-            ]),
-            theme: 'grid',
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [15, 23, 42] },
-        });
+        if (foods.length) {
+            doc.text('Foods', 14, y);
+            autoTable(doc, {
+                startY: y + 4,
+                head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
+                body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
+                    f.title, f.qty, formatLKR(f.rate), formatLKR(f.amount)
+                ]),
+                theme: 'grid',
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [15, 23, 42] },
+            });
 
-        y = (doc.lastAutoTable?.finalY ?? y) + 8;
+            y = (doc.lastAutoTable?.finalY ?? y) + 8;
+        }
 
         // Payments
-        doc.text('Payments', 14, y);
-        autoTable(doc, {
-            startY: y + 4,
-            head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
-            body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
-                p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), Number(p.amount || 0).toFixed(2)
-            ]),
-            theme: 'grid',
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [15, 23, 42] },
-        });
 
-        y = (doc.lastAutoTable?.finalY ?? y) + 10;
+        if (payments.length) {
+            doc.text('Payments', 14, y);
+            autoTable(doc, {
+                startY: y + 4,
+                head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
+                body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
+                    p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), formatLKR(p.amount)
+                ]),
+                theme: 'grid',
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [15, 23, 42] },
+            });
 
+            y = (doc.lastAutoTable?.finalY ?? y) + 10;
+        }
         autoTable(doc, {
             startY: y + 6,
             head: [['Description', 'Amount (LKR)']],
             body: [
-                ['Room Charges', Number(roomCharges).toFixed(2)],
-                ['Other Charges', Number(otherCharges).toFixed(2)],
-                ['Total', Number(total).toFixed(2)],
-                ['Paid', Number(paid).toFixed(2)],
-                ['Balance', Number(balance).toFixed(2)],
+                ['Room Charges', formatLKR(roomCharges)],
+                ['Other Charges', formatLKR(otherCharges)],
+                ['Total', formatLKR(total)],
+                ['Paid', formatLKR(paid)],
+                ['Balance', formatLKR(balance)],
             ],
             theme: 'plain',
             styles: { fontSize: 10 },
             columnStyles: {
-                0: { halign: 'left' },   // first column
-                1: { halign: 'right' },  // second column
+                0: { halign: 'left' },
+                1: { halign: 'right' },
             },
         });
 
-        // doc.save(`${res.code || 'reservation'}.pdf`);
-        doc.save(`reservation.pdf`);
+        // ⬇️ Instead of saving, open print preview
+        const blobUrl = doc.output('bloburl');
+        const win = window.open(blobUrl);
+        win.onload = () => {
+            win.print();
+        };
     };
+
     const handleCancel = async () => {
 
 
