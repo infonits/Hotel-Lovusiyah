@@ -23,7 +23,7 @@ export default function Rooms() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [error, setError] = useState('');
-    const itemsPerPage = 5;
+    const itemsPerPage = 10;
 
     // Form state (used for both create & edit)
     const [form, setForm] = useState({

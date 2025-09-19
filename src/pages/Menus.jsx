@@ -5,14 +5,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { supabase } from '../lib/supabse';
 
-const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Beverages', 'Snacks', 'Desserts'];
+const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Beverages', 'Snacks', 'Desserts', 'Egg items', 'Soups'];
 
 export default function MenusPage() {
     const [menus, setMenus] = useState([]);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const itemsPerPage = 20;
 
     const [showAddForm, setShowAddForm] = useState(false);
     const [newItem, setNewItem] = useState({

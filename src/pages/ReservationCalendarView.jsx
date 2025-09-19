@@ -131,7 +131,7 @@ export default function ReservationCalendarView() {
     };
 
     const handleNavigate = () => {
-        navigate('/dashboard/create-reservation');
+        navigate('/dashboard/reservations/new');
     };
 
     /* ----------------- month map ----------------- */
@@ -455,8 +455,8 @@ export default function ReservationCalendarView() {
                                                     <div className="flex items-start justify-between mb-1">
                                                         <span className="font-medium text-slate-800">Rooms {reservation.rooms}</span>
                                                         <span className={`px-2 py-1 rounded text-xs font-medium ${reservation.status === 'confirmed'
-                                                                ? 'bg-emerald-100 text-emerald-700'
-                                                                : 'bg-amber-100 text-amber-700'
+                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                            : 'bg-amber-100 text-amber-700'
                                                             }`}>
                                                             {reservation.status}
                                                         </span>

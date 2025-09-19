@@ -14,8 +14,10 @@ import Reports from './Reports';
 import CreateReservation from './CreateReservation';
 import Menus from './Menus';
 import ReservationView from './ReservationView';
+import Reservations from './Reservations';
 
 const navItems = [
+    { label: 'Dashboard', icon: 'lucide:layout-dashboard', href: '/dashboard/dashboard' },
     { label: 'Reservations', icon: 'lucide:calendar-check', href: '/dashboard/reservations' },
     { label: 'Guests', icon: 'lucide:users', href: '/dashboard/guests' },
     { label: 'Rooms', icon: 'lucide:bed', href: '/dashboard/rooms' },
@@ -147,13 +149,14 @@ export default function HotelDashboard() {
                     <Routes>
                         <Route path="rooms" element={<Rooms />} />
                         <Route path="menus" element={<Menus />} />
-                        <Route path="reservations" element={<ReservationCalendarView />} />
+                        <Route path="dashboard" element={<ReservationCalendarView />} />
+                        <Route path="reservations" element={<Reservations />} />
                         <Route path="guests" element={<Guests />} />
                         <Route path="housekeeping" element={<Services />} />
                         <Route path="analytics" element={<Reports />} />
                         <Route path="expenses" element={<Expenses />} />
                         <Route path="reservations/:id" element={<ReservationView />} />
-                        <Route path="create-reservation" element={<CreateReservation />} />
+                        <Route path="reservations/new" element={<CreateReservation />} />
                     </Routes>
                 </div>
             </main>
