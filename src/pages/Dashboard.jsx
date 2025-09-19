@@ -17,7 +17,7 @@ import ReservationView from './ReservationView';
 import Reservations from './Reservations';
 
 const navItems = [
-    { label: 'Dashboard', icon: 'lucide:layout-dashboard', href: '/dashboard/dashboard' },
+    { label: 'Dashboard', icon: 'lucide:layout-dashboard', href: '/dashboard' },
     { label: 'Reservations', icon: 'lucide:calendar-check', href: '/dashboard/reservations' },
     { label: 'Guests', icon: 'lucide:users', href: '/dashboard/guests' },
     { label: 'Rooms', icon: 'lucide:bed', href: '/dashboard/rooms' },
@@ -147,9 +147,9 @@ export default function HotelDashboard() {
                 {/* Inner Routes */}
                 <div className="flex-1 overflow-y-auto  relative z-0">
                     <Routes>
+                        <Route path="" element={<ReservationCalendarView />} />
                         <Route path="rooms" element={<Rooms />} />
                         <Route path="menus" element={<Menus />} />
-                        <Route path="dashboard" element={<ReservationCalendarView />} />
                         <Route path="reservations" element={<Reservations />} />
                         <Route path="guests" element={<Guests />} />
                         <Route path="housekeeping" element={<Services />} />

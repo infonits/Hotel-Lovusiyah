@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { supabase } from '../lib/supabse';
+import { useSearchParams } from 'react-router-dom';
 
 /* ---------- Utils ---------- */
 const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
@@ -50,18 +51,42 @@ function Stepper({ step }) {
 
 /* ---------- Step 1 ---------- */
 function DatesAndRooms({
-    dates,
-    setDates,
-    totalNights,
-    availableRooms,
-    loadingRooms,
-    selectedRoomIds,
-    toggleRoom,
-    canNextFromStep1,
-    goNext,
+    dates, setDates, totalNights,
+    availableRooms, loadingRooms,
+    selectedRoomIds, toggleRoom,
+    canNextFromStep1, goNext,
+    filterPax, setFilterPax,
+    filterType, setFilterType
 }) {
+    const [showAll, setShowAll] = useState(false);
+
+    // Multi-filter logic
+    const filteredRooms = useMemo(() => {
+        return availableRooms.filter(r => {
+            const matchType = filterType.length === 0 || filterType.includes(r.type);
+            const matchPax = filterPax.length === 0 || filterPax.some(p => r.capacity >= p);
+            return matchType && matchPax;
+        });
+    }, [availableRooms, filterPax, filterType]);
+
+    const selectedRoomsShort = availableRooms
+        .filter(r => selectedRoomIds.includes(r.id))
+        .map(r => `#${r.number}`)
+        .join(', ');
+
+    const roomsToShow = showAll ? filteredRooms : filteredRooms.slice(0, 6);
+
+    const toggleChip = (value, setter, current) => {
+        setter(
+            current.includes(value)
+                ? current.filter(v => v !== value)
+                : [...current, value]
+        );
+    };
+
     return (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
+            {/* Dates + Nights */}
             <div className="grid sm:grid-cols-3 gap-4">
                 <div>
                     <label className="text-sm text-slate-600">Check-in</label>
@@ -71,13 +96,11 @@ function DatesAndRooms({
                         onChange={(e) => {
                             const newFrom = e.target.value;
                             let newTo = dates.to;
-                            // if no checkout yet, or checkout <= new checkin, push checkout forward
                             if (!newTo || dayjs(newTo).diff(newFrom, 'day') <= 0) {
                                 newTo = dayjs(newFrom).add(1, 'day').format('YYYY-MM-DD');
                             }
                             setDates({ from: newFrom, to: newTo });
                         }}
-
                         className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
                     />
                 </div>
@@ -89,13 +112,11 @@ function DatesAndRooms({
                         onChange={(e) => {
                             let newTo = e.target.value;
                             let newFrom = dates.from;
-                            // if checkout <= checkin, pull checkin back one day before new checkout
                             if (dayjs(newTo).diff(newFrom, 'day') <= 0) {
                                 newFrom = dayjs(newTo).subtract(1, 'day').format('YYYY-MM-DD');
                             }
                             setDates({ from: newFrom, to: newTo });
                         }}
-
                         className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
                     />
                 </div>
@@ -105,28 +126,64 @@ function DatesAndRooms({
                         <div className="font-semibold text-slate-800">
                             {totalNights} ({dayjs(dates.from).format('MMM D')} → {dayjs(dates.to).format('MMM D')})
                         </div>
+                        {selectedRoomsShort && (
+                            <div className="text-xs text-slate-600 mt-1">
+                                Selected: {selectedRoomsShort}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center justify-between mt-6">
-                <h3 className="text-slate-800 font-semibold flex items-center gap-2">
-                    <Icon icon="lucide:bed" className="w-5 h-5" /> Available Rooms
-                </h3>
-                {loadingRooms ? (
-                    <div className="text-sm text-slate-500 flex items-center gap-2">
-                        <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" /> Checking…
+            {/* Filters */}
+            <div className="mt-6 space-y-4">
+                {/* Pax filter */}
+                <div>
+                    <div className="text-sm text-slate-600 mb-1">Filter by Pax</div>
+                    <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3, 4].map(p => (
+                            <button
+                                key={p}
+                                type="button"
+                                onClick={() => toggleChip(p, setFilterPax, filterPax)}
+                                className={`px-3 py-1 rounded-full text-sm border ${filterPax.includes(p)
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                    }`}
+                            >
+                                {p}+
+                            </button>
+                        ))}
                     </div>
-                ) : (
-                    <div className="text-sm text-slate-600">Select multiple rooms if needed</div>
-                )}
+                </div>
+
+                {/* Type filter */}
+                <div>
+                    <div className="text-sm text-slate-600 mb-1">Filter by Room Type</div>
+                    <div className="flex flex-wrap gap-2">
+                        {['Single', 'Double', 'Suite', 'Family'].map(t => (
+                            <button
+                                key={t}
+                                type="button"
+                                onClick={() => toggleChip(t, setFilterType, filterType)}
+                                className={`px-3 py-1 rounded-full text-sm border ${filterType.includes(t)
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                    }`}
+                            >
+                                {t}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                {!loadingRooms && availableRooms.length === 0 && (
-                    <div className="col-span-full text-slate-500 text-sm">No rooms available for the selected dates.</div>
+            {/* Rooms */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                {!loadingRooms && roomsToShow.length === 0 && (
+                    <div className="col-span-full text-slate-500 text-sm">No rooms match filters.</div>
                 )}
-                {availableRooms.map((r) => {
+                {roomsToShow.map((r) => {
                     const active = selectedRoomIds.includes(r.id);
                     return (
                         <button
@@ -149,24 +206,37 @@ function DatesAndRooms({
                 })}
             </div>
 
+            {/* Show more/less */}
+            {filteredRooms.length > 6 && (
+                <div className="mt-4 text-center">
+                    <button
+                        type="button"
+                        onClick={() => setShowAll(!showAll)}
+                        className="text-sm text-blue-600 hover:underline"
+                    >
+                        {showAll ? 'Show Less' : 'Show All'}
+                    </button>
+                </div>
+            )}
+
+            {/* Footer */}
             <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-slate-600">
                     Selected: <span className="font-semibold text-slate-800">{selectedRoomIds.length}</span>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        disabled={!canNextFromStep1}
-                        onClick={goNext}
-                        className={`px-4 py-2 rounded-lg text-white shadow-sm flex items-center gap-2
-              ${canNextFromStep1 ? 'bg-slate-900 hover:bg-black' : 'bg-slate-400 cursor-not-allowed'}`}
-                    >
-                        Next <Icon icon="lucide:arrow-right" className="w-4 h-4" />
-                    </button>
-                </div>
+                <button
+                    disabled={!canNextFromStep1}
+                    onClick={goNext}
+                    className={`px-4 py-2 rounded-lg text-white shadow-sm flex items-center gap-2
+            ${canNextFromStep1 ? 'bg-slate-900 hover:bg-black' : 'bg-slate-400 cursor-not-allowed'}`}
+                >
+                    Next <Icon icon="lucide:arrow-right" className="w-4 h-4" />
+                </button>
             </div>
         </div>
     );
 }
+
 
 /* ---------- Step 2 ---------- */
 function GuestDetails({
@@ -434,6 +504,8 @@ function ExtrasAndReview({
 export default function CreateReservation() {
     const today = dayjs().format('YYYY-MM-DD');
     const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    const [searchParams, setSearchParams] = useSearchParams();
+
 
     // Wizard state
     const [step, setStep] = useState(1);
@@ -443,6 +515,8 @@ export default function CreateReservation() {
     const [availableRooms, setAvailableRooms] = useState([]);
     const [loadingRooms, setLoadingRooms] = useState(false);
     const [selectedRoomIds, setSelectedRoomIds] = useState([]);
+    const [filterPax, setFilterPax] = useState([]);
+    const [filterType, setFilterType] = useState([]);
 
     // Step 2
     const [nic, setNic] = useState('');
@@ -510,6 +584,20 @@ export default function CreateReservation() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dates.from, dates.to]);
 
+    /* ---------- Read query params for start/end ---------- */
+    useEffect(() => {
+        const start = searchParams.get('start');
+        const end = searchParams.get('end');
+
+        if (start && end) {
+            setDates({ from: start, to: end });
+
+            // remove params from URL
+            searchParams.delete('start');
+            searchParams.delete('end');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, []);
     /* ---------- Step 2: Find guest ---------- */
     const handleFindGuest = async () => {
         if (!nic.trim()) return;
@@ -697,6 +785,10 @@ export default function CreateReservation() {
                     toggleRoom={toggleRoom}
                     canNextFromStep1={canNextFromStep1}
                     goNext={goNext}
+                    filterPax={filterPax}
+                    setFilterPax={setFilterPax}
+                    filterType={filterType}
+                    setFilterType={setFilterType}
                 />
             )}
             {step === 2 && (
