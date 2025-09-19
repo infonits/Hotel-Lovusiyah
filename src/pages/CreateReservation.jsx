@@ -59,12 +59,19 @@ function DatesAndRooms({
     filterType, setFilterType
 }) {
     const [showAll, setShowAll] = useState(false);
+    const [roomTypes, setRoomTypes] = useState([]);
 
     // Multi-filter logic
     const filteredRooms = useMemo(() => {
         return availableRooms.filter(r => {
-            const matchType = filterType.length === 0 || filterType.includes(r.type);
-            const matchPax = filterPax.length === 0 || filterPax.some(p => r.capacity >= p);
+            const matchType =
+                filterType.length === 0 ||
+                filterType.map(t => t.toLowerCase()).includes(r.type?.toLowerCase());
+
+            const matchPax =
+                filterPax.length === 0 ||
+                filterPax.some(p => r.capacity >= p);
+
             return matchType && matchPax;
         });
     }, [availableRooms, filterPax, filterType]);
@@ -83,6 +90,24 @@ function DatesAndRooms({
                 : [...current, value]
         );
     };
+    useEffect(() => {
+        const fetchTypes = async () => {
+            const { data, error } = await supabase
+                .from("rooms")
+                .select("type", { count: "exact", head: false });
+
+            if (error) {
+                console.error(error);
+                return;
+            }
+
+            // Get unique types
+            const uniqueTypes = [...new Set(data.map(r => r.type))];
+            setRoomTypes(uniqueTypes);
+        };
+
+        fetchTypes();
+    }, []);
 
     return (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
@@ -161,7 +186,7 @@ function DatesAndRooms({
                 <div>
                     <div className="text-sm text-slate-600 mb-1">Filter by Room Type</div>
                     <div className="flex flex-wrap gap-2">
-                        {['Single', 'Double', 'Suite', 'Family'].map(t => (
+                        {roomTypes.map(t => (
                             <button
                                 key={t}
                                 type="button"
