@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { supabase } from '../lib/supabse';
+import { formatLKR } from '../utils/currency';
 
 const statusOptions = ['All', 'Confirmed', 'Pending', 'Cancelled'];
 
@@ -22,17 +23,48 @@ export default function ReservationsPage() {
         to: thisMonth.endOf('month').format('YYYY-MM-DD'),
     });
 
-    /* ---------------- Fetch Reservations ---------------- */
+    // pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    /* ---------------- Fetch Reservations with Guests + Rooms ---------------- */
     useEffect(() => {
         const fetchReservations = async () => {
             setLoading(true);
             const { data, error } = await supabase
                 .from('reservations')
-                .select('*')
+                .select(`
+                    id,
+                    status,
+                    estimated_total,
+                    check_in_date,
+                    check_out_date,
+                    reservation_guests (
+                        guest:guests (
+                            id,
+                            name,
+                            email,
+                            phone,
+                            nic
+                        )
+                    ),
+                    reservation_rooms (
+                        room:rooms (
+                            id,
+                            number,
+                            type,
+                            price
+                        )
+                    )
+                `)
                 .order('check_in_date', { ascending: false });
 
-            if (error) console.error('Error fetching reservations:', error);
-            else setReservations(data);
+            if (error) {
+                console.error('Error fetching reservations:', error);
+                setReservations([]);
+            } else {
+                setReservations(data || []);
+            }
             setLoading(false);
         };
 
@@ -40,28 +72,55 @@ export default function ReservationsPage() {
     }, []);
 
     /* ---------------- Filters ---------------- */
-    const filteredReservations = useMemo(() => {
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+
         return reservations.filter((r) => {
-            const matchesStatus =
-                statusFilter === 'All' || r.status.toLowerCase() === statusFilter.toLowerCase();
-            const matchesSearch =
-                r.guest_name?.toLowerCase().includes(search.toLowerCase()) ||
-                r.room_type?.toLowerCase().includes(search.toLowerCase());
-            const inDateRange =
-                dayjs(r.check_in_date).isAfter(dayjs(dateFilter.from).subtract(1, 'day')) &&
-                dayjs(r.check_in_date).isBefore(dayjs(dateFilter.to).add(1, 'day'));
-            return matchesStatus && matchesSearch && inDateRange;
+            const statusOk =
+                statusFilter === 'All'
+                    ? true
+                    : String(r.status || '').toLowerCase() === statusFilter.toLowerCase();
+
+            const searchOk =
+                !q ||
+                r.reservation_guests?.some((g) =>
+                    g.guest?.name?.toLowerCase().includes(q)
+                ) ||
+                r.reservation_rooms?.some(
+                    (rr) =>
+                        rr.room?.type?.toLowerCase().includes(q) ||
+                        rr.room?.number?.toLowerCase().includes(q)
+                );
+
+            const d = dayjs(r.check_in_date);
+            const fromOk = !dateFilter.from || d.isAfter(dayjs(dateFilter.from).subtract(1, 'day'));
+            const toOk = !dateFilter.to || d.isBefore(dayjs(dateFilter.to).add(1, 'day'));
+            const rangeOk = fromOk && toOk;
+
+            return statusOk && searchOk && rangeOk;
         });
     }, [reservations, statusFilter, search, dateFilter]);
 
+    /* ---------------- Pagination ---------------- */
+    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     /* ---------------- Summary ---------------- */
     const summary = useMemo(() => {
-        const total = filteredReservations.length;
-        const confirmed = filteredReservations.filter((r) => r.status === 'confirmed').length;
-        const guests = filteredReservations.reduce((sum, r) => sum + (r.guest_count || 1), 0);
-        const revenue = filteredReservations.reduce((sum, r) => sum + (r.amount || 0), 0);
+        const total = filtered.length;
+        const confirmed = filtered.filter(
+            (r) => String(r.status || '').toLowerCase() === 'confirmed'
+        ).length;
+        const guests = filtered.reduce(
+            (sum, r) => sum + (r.reservation_guests?.length || 0),
+            0
+        );
+        const revenue = filtered.reduce(
+            (sum, r) => sum + (Number(r.estimated_total) || 0),
+            0
+        );
         return { total, confirmed, guests, revenue };
-    }, [filteredReservations]);
+    }, [filtered]);
 
     /* ---------------- Render ---------------- */
     return (
@@ -82,16 +141,22 @@ export default function ReservationsPage() {
                                 type="text"
                                 placeholder="Search reservations..."
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm focus:outline-none focus:ring focus:ring-emerald-100"
+                                onChange={(e) => {
+                                    setSearch(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm"
                             />
                         </div>
 
                         {/* Status Filter */}
                         <select
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring focus:ring-emerald-100"
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="px-4 py-2 rounded-lg border border-slate-200 bg-white/50 backdrop-blur-sm"
                         >
                             {statusOptions.map((s) => (
                                 <option key={s}>{s}</option>
@@ -117,7 +182,6 @@ export default function ReservationsPage() {
                         />
                     </div>
 
-                    {/* Navigate to Reservation Form */}
                     <button
                         onClick={() => navigate('/dashboard/reservations/new')}
                         className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-slate-900 hover:bg-slate-950 text-white shadow-sm"
@@ -130,10 +194,30 @@ export default function ReservationsPage() {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <SummaryCard icon="lucide:calendar" label="Total Reservations" value={summary.total} color="bg-emerald-100 text-emerald-700" />
-                <SummaryCard icon="lucide:badge-check" label="Confirmed" value={summary.confirmed} color="bg-blue-100 text-blue-700" />
-                <SummaryCard icon="lucide:users" label="Guests" value={summary.guests} color="bg-indigo-100 text-indigo-700" />
-                <SummaryCard icon="lucide:wallet" label="Revenue" value={`LKR ${summary.revenue.toFixed(2)}`} color="bg-pink-100 text-pink-700" />
+                <SummaryCard
+                    icon="lucide:calendar"
+                    label="Total Reservations"
+                    value={summary.total}
+                    color="bg-emerald-100 text-emerald-700"
+                />
+                <SummaryCard
+                    icon="lucide:badge-check"
+                    label="Confirmed"
+                    value={summary.confirmed}
+                    color="bg-blue-100 text-blue-700"
+                />
+                <SummaryCard
+                    icon="lucide:users"
+                    label="Guests"
+                    value={summary.guests}
+                    color="bg-indigo-100 text-indigo-700"
+                />
+                <SummaryCard
+                    icon="lucide:wallet"
+                    label="Revenue"
+                    value={formatLKR(summary.revenue)}
+                    color="bg-pink-100 text-pink-700"
+                />
             </div>
 
             {/* Table */}
@@ -142,10 +226,10 @@ export default function ReservationsPage() {
                     <table className="w-full">
                         <thead className="bg-slate-50/50">
                             <tr>
-                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Guest</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Guest(s)</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check-In</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check-Out</th>
-                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Room</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Room(s)</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Status</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Amount</th>
                             </tr>
@@ -157,31 +241,47 @@ export default function ReservationsPage() {
                                         Loading...
                                     </td>
                                 </tr>
-                            ) : filteredReservations.length === 0 ? (
+                            ) : paginated.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="px-6 py-4 text-center text-slate-500">
                                         No reservations found
                                     </td>
                                 </tr>
                             ) : (
-                                filteredReservations.map((r) => (
+                                paginated.map((r) => (
                                     <tr
                                         key={r.id}
                                         className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors"
                                     >
-                                        <td className="px-6 py-4 font-medium text-slate-800">{r.guest_name}</td>
-                                        <td className="px-6 py-4 text-slate-800">{dayjs(r.check_in_date).format('MMM D, YYYY')}</td>
-                                        <td className="px-6 py-4 text-slate-800">{dayjs(r.check_out_date).format('MMM D, YYYY')}</td>
-                                        <td className="px-6 py-4 text-slate-800">{r.room_type}</td>
+                                        <td className="px-6 py-4 font-medium text-slate-800">
+                                            {r.reservation_guests?.map((g) => g.guest?.name).join(', ') || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-800">
+                                            {dayjs(r.check_in_date).format('MMM D, YYYY')}
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-800">
+                                            {dayjs(r.check_out_date).format('MMM D, YYYY')}
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-800">
+                                            {r.reservation_rooms
+                                                ?.map((rr) => `${rr.room?.number} (${rr.room?.type})`)
+                                                .join(', ') || '-'}
+                                        </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium
-                        ${r.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                                                    r.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                        'bg-red-100 text-red-700'}`}>
+                                            <span
+                                                className={`px-2 py-1 rounded text-xs font-medium
+                                                    ${String(r.status).toLowerCase() === 'confirmed'
+                                                        ? 'bg-emerald-100 text-emerald-700'
+                                                        : String(r.status).toLowerCase() === 'pending'
+                                                            ? 'bg-amber-100 text-amber-700'
+                                                            : 'bg-red-100 text-red-700'}`}
+                                            >
                                                 {r.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-800">LKR {Number(r.amount).toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-slate-800">
+                                            {formatLKR(r.estimated_total || 0)}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -189,13 +289,41 @@ export default function ReservationsPage() {
                     </table>
                 </div>
 
-                <div className="px-6 py-4 border-t border-slate-200/50 bg-slate-50/30 flex items-center justify-between">
-                    <div className="text-sm text-slate-600">
-                        Showing {filteredReservations.length}{' '}
-                        {filteredReservations.length === 1 ? 'reservation' : 'reservations'}
-                    </div>
-                    <div className="text-sm font-semibold text-slate-800">
-                        Total Revenue: LKR {summary.revenue.toFixed(2)}
+                {/* Pagination */}
+                <div className="px-6 py-4 border-t border-slate-200/50 bg-slate-50/30">
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm text-slate-600">
+                            Showing {(currentPage - 1) * itemsPerPage + (paginated.length ? 1 : 0)} to{' '}
+                            {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} results
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50"
+                            >
+                                <Icon icon="lucide:chevron-left" width="16" height="16" />
+                            </button>
+                            {[...Array(totalPages)].map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setCurrentPage(i + 1)}
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${currentPage === i + 1
+                                            ? 'bg-slate-900 text-white'
+                                            : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                        }`}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50"
+                            >
+                                <Icon icon="lucide:chevron-right" width="16" height="16" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
