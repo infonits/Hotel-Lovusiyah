@@ -8,7 +8,6 @@ import { formatLKR } from '../utils/currency';
 const ReservationContext = createContext(null);
 export const useReservation = () => useContext(ReservationContext);
 
-const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
 
 export function ReservationProvider({ initialReservation, children }) {
     // Catalogs (services + menus from Supabase)
@@ -54,7 +53,7 @@ export function ReservationProvider({ initialReservation, children }) {
             try {
                 const [{ data: svc, error: svcErr }, { data: menus, error: menuErr }] = await Promise.all([
                     supabase.from('services')
-                        .select('id, name, price, status')
+                        .select('id, name, price, status,created_at')
                         .eq('status', 'active')
                         .order('name', { ascending: true }),
                     supabase.from('menus')
@@ -65,7 +64,7 @@ export function ReservationProvider({ initialReservation, children }) {
                 if (menuErr) throw menuErr;
 
                 if (!alive) return;
-                setServiceCatalog((svc || []).map(s => ({ id: s.id, title: s.name, rate: Number(s.price || 0) })));
+                setServiceCatalog((svc || []).map(s => ({ id: s.id, title: s.name, rate: formatLKR(s.price || 0) })));
                 setFoodCatalog((menus || []).map(m => ({ id: m.id, title: m.name, rate: Number(m.price || 0), category: m.category })));
             } catch (e) {
                 console.error('Catalog load failed:', e);
@@ -86,6 +85,7 @@ export function ReservationProvider({ initialReservation, children }) {
         qty: Number(r.qty || 0),
         rate: Number(r.rate || 0),
         amount: Number(r.amount || 0),
+        created_at: r.created_at,
     });
 
     const reloadItems = useCallback(async () => {
@@ -498,7 +498,7 @@ export function ReservationProvider({ initialReservation, children }) {
     };
 
     const value = {
-        currencyLKR,
+
         reservation,
         canceling,
 

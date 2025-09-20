@@ -4,13 +4,14 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { useReservation } from '../context/reservationContext';
+import { formatLKR } from '../utils/currency';
 
 export default function ReservationTabs() {
     const {
         // state
         tab, setTab,
         services, foods, payments,
-        currencyLKR,
+
 
         // item handlers (from provider)
         openAddService, openAddFood, openEditService, openEditFood, deleteService, deleteFood,
@@ -86,6 +87,7 @@ export default function ReservationTabs() {
                             <tr className="text-left text-sm text-slate-500">
                                 <th className="px-4 py-2 font-medium">Service</th>
                                 <th className="px-4 py-2 font-medium">Qty</th>
+                                <th className="px-4 py-2 font-medium">Date</th>
                                 <th className="px-4 py-2 font-medium">Rate</th>
                                 <th className="px-4 py-2 font-medium">Amount</th>
                                 <th className="px-4 py-2 font-medium">Actions</th>
@@ -100,8 +102,13 @@ export default function ReservationTabs() {
                                 <tr key={s._id} className="border-b last:border-0">
                                     <td className="px-4 py-3 text-slate-800">{s.title}</td>
                                     <td className="px-4 py-3 text-slate-600">{s.qty}</td>
-                                    <td className="px-4 py-3 text-slate-600">{currencyLKR(s.rate)}</td>
-                                    <td className="px-4 py-3 text-slate-800 font-medium">{currencyLKR(s.amount)}</td>
+                                    <td className="px-4 py-3 text-slate-600">
+                                        {s.created_at ? dayjs(s.created_at).format('MMM D, YYYY h:mm A') : '-'}
+
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-600">{formatLKR(s.rate)}</td>
+
+                                    <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(s.amount)}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex gap-2">
                                             <button onClick={() => openEditService(s)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
@@ -127,6 +134,8 @@ export default function ReservationTabs() {
                             <tr className="text-left text-sm text-slate-500">
                                 <th className="px-4 py-2 font-medium">Food</th>
                                 <th className="px-4 py-2 font-medium">Qty</th>
+                                <th className="px-4 py-2 font-medium">Ordered</th>
+
                                 <th className="px-4 py-2 font-medium">Rate</th>
                                 <th className="px-4 py-2 font-medium">Amount</th>
                                 <th className="px-4 py-2 font-medium">Actions</th>
@@ -141,8 +150,12 @@ export default function ReservationTabs() {
                                 <tr key={f._id} className="border-b last:border-0">
                                     <td className="px-4 py-3 text-slate-800">{f.title}</td>
                                     <td className="px-4 py-3 text-slate-600">{f.qty}</td>
-                                    <td className="px-4 py-3 text-slate-600">{currencyLKR(f.rate)}</td>
-                                    <td className="px-4 py-3 text-slate-800 font-medium">{currencyLKR(f.amount)}</td>
+                                    <td className="px-4 py-3 text-slate-600">
+                                        {f.created_at ? dayjs(f.created_at).format('MMM D, YYYY h:mm A') : '-'}
+
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-600">{formatLKR(f.rate)}</td>
+                                    <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(f.amount)}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex gap-2">
                                             <button onClick={() => openEditFood(f)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
@@ -191,7 +204,7 @@ export default function ReservationTabs() {
                                         <td className="px-4 py-3 text-slate-800">{p.type}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.method}</td>
                                         <td className="px-4 py-3 text-slate-600">{dayjs(p.date).format('YYYY-MM-DD')}</td>
-                                        <td className="px-4 py-3 text-slate-800 font-medium">{currencyLKR(p.amount)}</td>
+                                        <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(p.amount)}</td>
                                         <td className="px-4 py-3">
                                             <div className="flex gap-2">
                                                 <button onClick={() => openEditPayment(p)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">

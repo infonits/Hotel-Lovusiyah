@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { useReservation } from '../context/reservationContext';
+import { formatLKR } from '../utils/currency';
 
 export default function ReservationHeaderSummary() {
     const {
         reservation, handlePrint, nights,
-        roomCharges, otherCharges, total, paid, balance, currencyLKR, handleCancel, canceling
+        roomCharges, otherCharges, total, paid, balance, handleCancel, canceling
     } = useReservation();
 
 
@@ -103,7 +104,7 @@ export default function ReservationHeaderSummary() {
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Room Charges</div>
                         <div className="text-lg font-semibold text-slate-800">
-                            {currencyLKR(roomCharges)}
+                            {formatLKR(roomCharges)}
                         </div>
                     </div>
                 </div>
@@ -113,19 +114,19 @@ export default function ReservationHeaderSummary() {
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Other Charges</div>
                         <div className="text-lg font-semibold text-slate-800">
-                            {currencyLKR(otherCharges)}
+                            {formatLKR(otherCharges)}
                         </div>
                     </div>
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Total</div>
                         <div className="text-lg font-semibold text-slate-800">
-                            {currencyLKR(total)}
+                            {formatLKR(total)}
                         </div>
                     </div>
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Paid</div>
                         <div className="text-lg font-semibold text-slate-800">
-                            {currencyLKR(paid)}
+                            {formatLKR(paid)}
                         </div>
                     </div>
                 </div>
@@ -138,7 +139,7 @@ export default function ReservationHeaderSummary() {
                             className={`text-lg font-semibold ${balance > 0 ? 'text-amber-700' : 'text-emerald-700'
                                 }`}
                         >
-                            {currencyLKR(balance)}
+                            {formatLKR(balance)}
                         </div>
                     </div>
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70 sm:col-span-2">

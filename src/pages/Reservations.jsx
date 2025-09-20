@@ -107,6 +107,9 @@ export default function ReservationsPage() {
 
     /* ---------------- Summary ---------------- */
     const summary = useMemo(() => {
+        const nonCancelled = filtered.filter(
+            (r) => String(r.status || '').toLowerCase() !== 'cancelled'
+        );
         const total = filtered.length;
         const confirmed = filtered.filter(
             (r) => String(r.status || '').toLowerCase() === 'confirmed'
@@ -115,7 +118,7 @@ export default function ReservationsPage() {
             (sum, r) => sum + (r.reservation_guests?.length || 0),
             0
         );
-        const revenue = filtered.reduce(
+        const revenue = nonCancelled.reduce(
             (sum, r) => sum + (Number(r.estimated_total) || 0),
             0
         );
@@ -232,6 +235,7 @@ export default function ReservationsPage() {
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Room(s)</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Status</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Amount</th>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -262,11 +266,19 @@ export default function ReservationsPage() {
                                         <td className="px-6 py-4 text-slate-800">
                                             {dayjs(r.check_out_date).format('MMM D, YYYY')}
                                         </td>
-                                        <td className="px-6 py-4 text-slate-800">
-                                            {r.reservation_rooms
-                                                ?.map((rr) => `${rr.room?.number} (${rr.room?.type})`)
-                                                .join(', ') || '-'}
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                {/* Room Count Badge */}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                                        {r.reservation_rooms?.length || 0} {r.reservation_rooms?.length === 1 ? 'Room' : 'Rooms'}
+                                                    </span>
+                                                </div>
+
+
+                                            </div>
                                         </td>
+
                                         <td className="px-6 py-4">
                                             <span
                                                 className={`px-2 py-1 rounded text-xs font-medium
@@ -280,7 +292,55 @@ export default function ReservationsPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-slate-800">
-                                            {formatLKR(r.estimated_total || 0)}
+                                            {String(r.status).toLowerCase() === 'cancelled'
+                                                ? 'N/A'
+                                                : formatLKR(r.estimated_total || 0)}
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-800">
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center gap-1">
+                                                {/* Room Details Tooltip Button */}
+                                                <div className="group relative">
+                                                    <button
+                                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                        title="View room details"
+                                                    >
+                                                        <Icon icon="lucide:info" className="w-4 h-4" />
+                                                    </button>
+
+                                                    {/* Tooltip - Portal positioned to avoid clipping */}
+                                                    {r.reservation_rooms?.length > 0 && (
+                                                        <div className="invisible group-hover:visible absolute top-full right-0 mt-2 z-50">
+                                                            <div className="bg-slate-800 text-white text-xs rounded-lg py-2 px-3 shadow-xl border border-slate-700 min-w-max">
+                                                                <div className="space-y-1">
+                                                                    {r.reservation_rooms.slice(0, 3).map((rr, idx) => (
+                                                                        <div key={idx} className="flex items-center gap-2 whitespace-nowrap">
+                                                                            <span className="font-medium">{rr.room?.number}</span>
+                                                                            <span className="text-slate-300">({rr.room?.type})</span>
+                                                                        </div>
+                                                                    ))}
+                                                                    {r.reservation_rooms.length > 3 && (
+                                                                        <div className="text-slate-300 text-center pt-1 border-t border-slate-600 whitespace-nowrap">
+                                                                            +{r.reservation_rooms.length - 3} more
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                {/* Tooltip Arrow */}
+                                                                <div className="absolute bottom-full right-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-slate-800"></div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Open Reservation Button */}
+                                                <button
+                                                    onClick={() => navigate(`/dashboard/reservations/${r.id}`)}
+                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                    title="Open reservation"
+                                                >
+                                                    <Icon icon="fluent:open-24-regular" className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -309,8 +369,8 @@ export default function ReservationsPage() {
                                     key={i}
                                     onClick={() => setCurrentPage(i + 1)}
                                     className={`px-3 py-2 rounded-lg text-sm font-medium ${currentPage === i + 1
-                                            ? 'bg-slate-900 text-white'
-                                            : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                        ? 'bg-slate-900 text-white'
+                                        : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                                         }`}
                                 >
                                     {i + 1}

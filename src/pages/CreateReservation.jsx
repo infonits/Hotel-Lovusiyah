@@ -280,33 +280,77 @@ function GuestDetails({
     goBack,
     goNext,
 }) {
+    const [nicSuggestions, setNicSuggestions] = useState([]);
     const handleAddGuest = () => {
         if (!currentGuest.name || !currentGuest.nicNumber) return;
         setGuests((prev) => [...prev, currentGuest]);
         setCurrentGuest({ name: '', nicNumber: '', phone: '', email: '', address: '', id: null });
         setNic('');
     };
+    useEffect(() => {
+        const fetchNICs = async () => {
+            if (nic.trim().length < 2) {
+                setNicSuggestions([]);
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from("guests")
+                .select("nic")
+                .ilike("nic", `%${nic}%`)
+                .limit(5);
+
+            if (!error && data) {
+                setNicSuggestions(data.map(g => g.nic));
+            }
+        };
+
+        const delay = setTimeout(fetchNICs, 300); // debounce typing
+        return () => clearTimeout(delay);
+    }, [nic]);
+
 
     return (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
             <div className="grid sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
                     <label className="text-sm text-slate-600">NIC Number</label>
-                    <div className="mt-1 flex gap-2">
-                        <input
-                            value={nic}
-                            onChange={(e) => setNic(e.target.value)}
-                            placeholder="Eg: 991234567V"
-                            className="flex-1 px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
-                        />
-                        <button
-                            type="button"
-                            onClick={handleFindGuest}
-                            className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-black text-white shadow-sm flex items-center gap-2"
-                        >
-                            <Icon icon="lucide:search" className="w-4 h-4" /> Find
-                        </button>
+                    <div className="relative flex-1">
+                        <div className="flex">
+
+                            <input
+                                value={nic}
+                                onChange={(e) => setNic(e.target.value)}
+                                placeholder="Eg: 991234567V"
+                                className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleFindGuest}
+                                className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-black text-white shadow-sm flex items-center gap-2"
+                            >
+                                <Icon icon="lucide:search" className="w-4 h-4" /> Find
+                            </button>
+                        </div>
+                        {nicSuggestions.length > 0 && (
+                            <ul className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                {nicSuggestions.map((s, idx) => (
+                                    <li
+                                        key={idx}
+                                        onClick={() => {
+                                            setNic(s);
+                                            setNicSuggestions([]);
+                                        }}
+                                        className="px-4 py-2 cursor-pointer hover:bg-slate-100"
+                                    >
+                                        {s}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+
                     </div>
+
                     {guestLoading && (
                         <div className="text-sm text-slate-500 mt-2 flex items-center gap-2">
                             <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" /> Searching…

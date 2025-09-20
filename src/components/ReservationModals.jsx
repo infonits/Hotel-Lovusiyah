@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { useReservation } from '../context/reservationContext';
+import { formatLKR } from '../utils/currency';
 
 export default function ReservationModals() {
-    const currencyLKR = (n) => `LKR ${Number(n || 0).toFixed(2)}`;
 
 
 
@@ -95,6 +95,15 @@ export default function ReservationModals() {
         }
     };
 
+    useEffect(() => {
+        if (paymentModalOpen || itemModalOpen || cancelModalOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+    }, [paymentModalOpen, itemModalOpen, cancelModalOpen]);
+
+
     return (
         <>
             {/* -------- Item Modal (Service/Food) -------- */}
@@ -137,7 +146,7 @@ export default function ReservationModals() {
                                             // Simple flat list for services
                                             (serviceCatalog || []).map((s) => (
                                                 <option key={s.id} value={s.id}>
-                                                    {s.title} — {currencyLKR(s.rate)}
+                                                    {s.title} — {formatLKR(s.rate)}
                                                 </option>
                                             ))
                                         ) : (
@@ -146,7 +155,7 @@ export default function ReservationModals() {
                                                 <optgroup key={g.category} label={g.category}>
                                                     {g.items.map((f) => (
                                                         <option key={f.id} value={f.id}>
-                                                            {f.title} — {currencyLKR(f.rate)}
+                                                            {f.title} — {formatLKR(f.rate)}
                                                         </option>
                                                     ))}
                                                 </optgroup>
@@ -187,7 +196,7 @@ export default function ReservationModals() {
                                 <label className="text-sm text-slate-600">Amount</label>
                                 <input
                                     disabled
-                                    value={currencyLKR(itemForm.amount)}
+                                    value={formatLKR(itemForm.amount)}
                                     className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-slate-50/50 text-slate-700"
                                 />
                             </div>

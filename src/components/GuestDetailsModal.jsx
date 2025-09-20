@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { supabase } from '../lib/supabse';
+import { formatLKR } from '../utils/currency';
 
 export default function GuestDetailsModal({ guest, onClose }) {
     const [stats, setStats] = useState(null);
@@ -124,8 +125,11 @@ export default function GuestDetailsModal({ guest, onClose }) {
                             <p className="font-medium text-slate-800">{guest.dob || '-'}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Created</p>
-                            <p className="font-medium text-slate-800">{guest.created_at || '-'}</p>
+                            <p className="text-sm text-slate-500">Joined us</p>
+                            <p className="font-medium text-slate-800">
+                                {guest.created_at ? dayjs(guest.created_at).format('MMM D, YYYY h:mm A') : '-'}
+                            </p>
+
                         </div>
                     </div>
 
@@ -155,10 +159,14 @@ export default function GuestDetailsModal({ guest, onClose }) {
                     {loading ? (
                         <p className="text-sm text-slate-500">Loading stats…</p>
                     ) : (
-                        <div className="grid md:grid-cols-5 gap-4">
+                        <div className="grid md:grid-cols-3 gap-4">
                             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
                                 <p className="text-xs text-slate-500">Total Bookings</p>
                                 <p className="text-xl font-semibold text-slate-800">{stats.totalBookings}</p>
+                            </div>
+                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                                <p className="text-xs text-slate-500">Cancellations</p>
+                                <p className="text-xl font-semibold text-slate-800">{stats.cancellations}</p>
                             </div>
                             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
                                 <p className="text-xs text-slate-500">Last Booking</p>
@@ -171,13 +179,10 @@ export default function GuestDetailsModal({ guest, onClose }) {
                             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
                                 <p className="text-xs text-slate-500">Lifetime Spend</p>
                                 <p className="text-sm font-semibold text-slate-800">
-                                    LKR {stats.lifetimeSpendLKR.toLocaleString()}
+                                    {formatLKR(stats.lifetimeSpendLKR)}
                                 </p>
                             </div>
-                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-                                <p className="text-xs text-slate-500">Cancellations</p>
-                                <p className="text-xl font-semibold text-slate-800">{stats.cancellations}</p>
-                            </div>
+
                         </div>
                     )}
                 </div>

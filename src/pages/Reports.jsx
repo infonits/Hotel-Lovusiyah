@@ -7,6 +7,7 @@ import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabse';
+import { formatLKR } from '../utils/currency';
 
 /* ---------------- Helpers ---------------- */
 function inDateRange(dateISO, fromISO, toISO) {
@@ -16,9 +17,7 @@ function inDateRange(dateISO, fromISO, toISO) {
     d.isBefore(dayjs(toISO).add(1, 'day'))
   );
 }
-function currencyLKR(n) {
-  return `LKR ${Number(n || 0).toFixed(2)}`;
-}
+
 
 /* ---------------- Component ---------------- */
 export default function Reports() {
@@ -172,7 +171,7 @@ export default function Reports() {
         p.reservation_id,
         p.type,
         p.method,
-        currencyLKR(p.amount),
+        formatLKR(p.amount),
         dayjs(p.date).format('YYYY-MM-DD'),
       ]),
       theme: 'grid',
@@ -186,7 +185,7 @@ export default function Reports() {
         e.id,
         e.title,
         e.category,
-        currencyLKR(e.amount),
+        formatLKR(e.amount),
         dayjs(e.date).format('YYYY-MM-DD'),
         e.notes || '',
       ]),
@@ -196,7 +195,7 @@ export default function Reports() {
 
     doc.setFontSize(12);
     doc.text(
-      `Net Cashflow: ${currencyLKR(net)}`,
+      `Net Cashflow: ${formatLKR(net)}`,
       14,
       doc.lastAutoTable.finalY + 15
     );
@@ -278,7 +277,7 @@ export default function Reports() {
                 <div>
                   <div className="text-sm text-slate-500">Net Cashflow</div>
                   <div className={`text-xl font-semibold ${net >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {currencyLKR(net)}
+                    {formatLKR(net)}
                   </div>
                 </div>
               </div>
@@ -294,7 +293,7 @@ export default function Reports() {
                 <div className="bg-emerald-100 text-emerald-700 p-2 rounded-full"><Icon icon="lucide:credit-card" className="w-5 h-5" /></div>
                 <div>
                   <div className="text-sm text-slate-500">Total Payments</div>
-                  <div className="text-xl font-semibold text-slate-800">{currencyLKR(totalPayments)}</div>
+                  <div className="text-xl font-semibold text-slate-800">{formatLKR(totalPayments)}</div>
                 </div>
               </div>
             </div>
@@ -303,7 +302,7 @@ export default function Reports() {
                 <div className="bg-rose-100 text-rose-700 p-2 rounded-full"><Icon icon="lucide:receipt" className="w-5 h-5" /></div>
                 <div>
                   <div className="text-sm text-slate-500">Total Expenses</div>
-                  <div className="text-xl font-semibold text-slate-800">{currencyLKR(totalExpenses)}</div>
+                  <div className="text-xl font-semibold text-slate-800">{formatLKR(totalExpenses)}</div>
                 </div>
               </div>
             </div>
@@ -323,7 +322,7 @@ export default function Reports() {
             <div className="px-6 py-4 border-b border-slate-200/50 flex items-center justify-between bg-slate-50/30">
               <h3 className="text-slate-800 font-semibold">Payments</h3>
               <div className="text-sm text-slate-600">
-                Total: {currencyLKR(totalPayments)}
+                Total: {formatLKR(totalPayments)}
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -347,7 +346,7 @@ export default function Reports() {
                       {/* <td className="px-6 py-4">{p.reservation_id}</td> */}
                       <td className="px-6 py-4">{p.type}</td>
                       <td className="px-6 py-4">{p.method}</td>
-                      <td className="px-6 py-4">{currencyLKR(p.amount)}</td>
+                      <td className="px-6 py-4">{formatLKR(p.amount)}</td>
                       <td className="px-6 py-4">{dayjs(p.date).format('MMM D, YYYY')}</td>
                       <td className="px-6 py-4">{p.notes || '-'}</td>
                     </tr>
@@ -362,7 +361,7 @@ export default function Reports() {
             <div className="px-6 py-4 border-b border-slate-200/50 flex items-center justify-between bg-slate-50/30">
               <h3 className="text-slate-800 font-semibold">Expenses</h3>
               <div className="text-sm text-slate-600">
-                Total: {currencyLKR(totalExpenses)}
+                Total: {formatLKR(totalExpenses)}
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -384,7 +383,7 @@ export default function Reports() {
                     >
                       <td className="px-6 py-4">{e.title}</td>
                       <td className="px-6 py-4">{e.category}</td>
-                      <td className="px-6 py-4">{currencyLKR(e.amount)}</td>
+                      <td className="px-6 py-4">{formatLKR(e.amount)}</td>
                       <td className="px-6 py-4">{dayjs(e.date).format('MMM D, YYYY')}</td>
                       <td className="px-6 py-4">{e.notes || '-'}</td>
                     </tr>
