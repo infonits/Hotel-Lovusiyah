@@ -30,16 +30,35 @@ export default function ReservationView() {
                 const { data, error } = await supabase
                     .from('reservations')
                     .select(`
-           id,  notes, check_in_date, check_out_date, reservation_number, status, cancelled_at,
-          reservation_rooms (
-            rooms ( id, number, type, price )
-          ),
-          reservation_guests (
-            guests ( id, name, email, phone, nic )
-          )
-        `)
+    id,
+    notes,
+    check_in_date,
+    check_out_date,
+    reservation_number,
+    status,
+    cancelled_at,
+    reservation_rooms (
+      nightly_rate,
+      room: rooms (
+        id,
+        number,
+        type,
+        price
+      )
+    ),
+    reservation_guests (
+      guests (
+        id,
+        name,
+        email,
+        phone,
+        nic
+      )
+    )
+  `)
                     .eq('id', id)
                     .single();
+
 
                 if (error) throw error;
                 if (!alive) return;
@@ -65,14 +84,17 @@ export default function ReservationView() {
                     : null;
 
                 const rooms = (data?.reservation_rooms || []).map((rr) => {
-                    const r = rr.rooms || {};
+                    const r = rr.room || {};
                     return {
                         _id: r.id,
                         roomNumber: r.number,
                         type: r.type,
-                        price: Number(r.price || 0),
+                        price: Number(r.price || 0),          // original price
+                        nightlyRate: Number(rr.nightly_rate)  // 👈 added final offer price
                     };
                 });
+
+
 
                 setInitialReservation({
                     id: data.id,

@@ -54,7 +54,7 @@ function Stepper({ step }) {
 /* ---------- Step 1 ---------- */
 function DatesAndRooms({
     dates, setDates, totalNights,
-    availableRooms, loadingRooms,
+    availableRooms, loadingRooms, offerPrices, setOfferPrices,
     selectedRoomIds, toggleRoom,
     canNextFromStep1, goNext,
     filterPax, setFilterPax,
@@ -62,6 +62,7 @@ function DatesAndRooms({
 }) {
     const [showAll, setShowAll] = useState(false);
     const [roomTypes, setRoomTypes] = useState([]);
+    const [showOfferInputs, setShowOfferInputs] = useState({});
 
     // Multi-filter logic
     const filteredRooms = useMemo(() => {
@@ -212,25 +213,78 @@ function DatesAndRooms({
                 )}
                 {roomsToShow.map((r) => {
                     const active = selectedRoomIds.includes(r.id);
+                    const showOfferInput = showOfferInputs[r.id];
                     return (
-                        <button
+                        <div
                             key={r.id}
-                            type="button"
-                            onClick={() => toggleRoom(r.id)}
-                            className={`text-left p-4 rounded-xl border shadow-sm transition
-                ${active ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}
+                            className={`p-4 rounded-xl border shadow-sm transition
+${active ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}
                         >
-                            <div className="flex items-center justify-between">
-                                <div className="font-semibold text-slate-800">Room {r.number}</div>
-                                <Icon icon={active ? 'lucide:check-circle-2' : 'lucide:circle'} className="w-5 h-5 text-emerald-600" />
+                            <div
+                                onClick={() => toggleRoom(r.id)}
+                                className="cursor-pointer"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="font-semibold text-slate-800">Room {r.number}</div>
+                                    <Icon icon={active ? 'lucide:check-circle-2' : 'lucide:circle'} className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div className="mt-1 text-sm text-slate-600">
+                                    {r.type} · {r.capacity} pax
+                                </div>
+                                <span className="text-slate-800">
+                                    {offerPrices[r.id]
+                                        ? <><s className="text-slate-400">{formatLKR(r.price)}</s> {formatLKR(offerPrices[r.id])}</>
+                                        : formatLKR(r.price)
+                                    } × {totalNights}
+                                </span>
+
                             </div>
-                            <div className="mt-1 text-sm text-slate-600">
-                                {r.type} · {r.capacity} pax
+
+                            {/* Offer Price Section */}
+                            <div className="mt-3 pt-3 border-t border-slate-100">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-slate-700">Custom Offer</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowOfferInputs(prev => ({
+                                                ...prev,
+                                                [r.id]: !prev[r.id]
+                                            }));
+                                        }}
+                                        className={`px-2 py-1 text-xs rounded-md transition ${showOfferInput
+                                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                            }`}
+                                    >
+                                        {showOfferInput ? 'Cancel' : 'Make Offer'}
+                                    </button>
+                                </div>
+
+                                {showOfferInput && (
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-sm text-slate-600">LKR</div>
+                                        <input
+                                            type="number"
+                                            placeholder="Enter offer price"
+                                            value={offerPrices[r.id] || ""}
+                                            onChange={(e) =>
+                                                setOfferPrices((prev) => ({
+                                                    ...prev,
+                                                    [r.id]: Number(e.target.value) || null,
+                                                }))
+                                            }
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                        />
+                                        <div className="text-sm text-slate-500">/ night</div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="mt-2 text-slate-800">{formatLKR(r.price)} / night</div>
-                        </button>
+                        </div>
                     );
                 })}
+
             </div>
 
             {/* Show more/less */}
@@ -475,6 +529,7 @@ function ExtrasAndReview({
     goBack,
     handleSubmit,
     submitting,
+    offerPrices,
 }) {
     return (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
@@ -516,9 +571,12 @@ function ExtrasAndReview({
                                 {selectedRooms.map((r) => (
                                     <li key={r.id} className="flex items-center justify-between">
                                         <span className="text-slate-800">#{r.number} · {r.type}</span>
-                                        <span className="text-slate-800">{formatLKR(r.price)} × {totalNights}</span>
+                                        <span className="text-slate-800">
+                                            {formatLKR(offerPrices[r.id] ?? r.price)} × {totalNights}
+                                        </span>
                                     </li>
                                 ))}
+
                             </ul>
                         )}
 
@@ -534,6 +592,7 @@ function ExtrasAndReview({
                                 ))}
                             </ul>
                         )}
+
 
                         <div className="mt-4 border-t border-slate-200 pt-3 flex items-center justify-between">
                             <div className="text-slate-600">Room Total</div>
@@ -576,6 +635,8 @@ export default function CreateReservation() {
     const today = dayjs().format('YYYY-MM-DD');
     const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
     const [searchParams, setSearchParams] = useSearchParams();
+    const [offerPrices, setOfferPrices] = useState({});
+
 
 
     // Wizard state
@@ -607,10 +668,15 @@ export default function CreateReservation() {
         () => availableRooms.filter((r) => selectedRoomIds.includes(r.id)),
         [availableRooms, selectedRoomIds]
     );
+    const getRate = (room) => {
+        return offerPrices[room.id] ?? Number(room.price || 0);
+    };
+
     const roomTotal = useMemo(
-        () => selectedRooms.reduce((sum, r) => sum + Number(r.price || 0) * totalNights, 0),
+        () => selectedRooms.reduce((sum, r) => sum + getRate(r) * totalNights, 0),
         [selectedRooms, totalNights]
     );
+
 
     /* ---------- Data access: Rooms availability ---------- */
     const fetchAvailableRooms = async (fromDate, toDate) => {
@@ -781,8 +847,9 @@ export default function CreateReservation() {
             const roomRows = selectedRooms.map((r) => ({
                 reservation_id: reservationId,
                 room_id: r.id,
-                nightly_rate: Number(r.price || 0),
+                nightly_rate: getRate(r),  // 👈 final price used
             }));
+
             if (roomRows.length) {
                 const { error: rrErr } = await supabase.from('reservation_rooms').insert(roomRows);
                 if (rrErr) throw rrErr;
@@ -829,7 +896,16 @@ export default function CreateReservation() {
     const goBack = () => setStep((s) => Math.max(1, s - 1));
 
     const toggleRoom = (id) => {
-        setSelectedRoomIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+        setSelectedRoomIds((prev) => {
+            const newSelection = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+            if (!newSelection.includes(id)) {
+                setOfferPrices((prevOffers) => {
+                    const { [id]: _, ...rest } = prevOffers;
+                    return rest;
+                });
+            }
+            return newSelection;
+        });
     };
 
     return (
@@ -866,6 +942,8 @@ export default function CreateReservation() {
                     setFilterPax={setFilterPax}
                     filterType={filterType}
                     setFilterType={setFilterType}
+                    offerPrices={offerPrices}
+                    setOfferPrices={setOfferPrices}
                 />
             )}
             {step === 2 && (
@@ -887,6 +965,8 @@ export default function CreateReservation() {
             {step === 3 && (
                 <ExtrasAndReview
                     dates={dates}
+                    offerPrices={offerPrices}
+
                     totalNights={totalNights}
                     selectedRooms={selectedRooms}
                     guests={guests}
@@ -898,6 +978,7 @@ export default function CreateReservation() {
                     goBack={goBack}
                     handleSubmit={handleSubmit}
                     submitting={submitting}
+
                 />
             )}
         </div>

@@ -1,55 +1,88 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useReservation } from '../context/reservationContext';
 import { formatLKR } from '../utils/currency';
+import dayjs from 'dayjs';
+
+const icons = {
+    Cash: "lucide:banknote",
+    Card: "lucide:credit-card",
+    "Bank Transfer": "lucide:send-horizontal",
+    Advance: "lucide:arrow-down-circle",
+    Settlement: "lucide:check-circle",
+};
+
 
 export default function ReservationModals() {
-
-
-
-
     const {
         cancelModalOpen, setCancelModalOpen, confirmCancel, canceling,
 
-        // catalogs from Supabase (provided by ReservationProvider)
-        serviceCatalog,   // [{ id, title, rate }]
-        foodCatalog,      // [{ id, title, rate, category }]
-        catalogLoading,
+        serviceCatalog, foodCatalog, catalogLoading,
 
-        // item modal
         itemModalOpen, setItemModalOpen, itemEditing, setItemEditing,
         itemMode, itemForm, setItemForm, saveItem,
 
-        // payment modal
-        paymentModalOpen, setPaymentModalOpen, paymentEditing, setPaymentEditing,
-        paymentForm, setPaymentForm, savePayment,
+        // 👇 Add setPaymentModalOpen here
+        paymentEditing, setPaymentEditing, paymentModalOpen, setPaymentModalOpen,
+        savePayment,
     } = useReservation();
+
+
+    const [localPaymentForm, setLocalPaymentForm] = useState({
+        type: 'Advance',
+        method: 'Cash',
+        date: dayjs().format('YYYY-MM-DD'),
+        amount: 0,
+    });
+
+    useEffect(() => {
+        if (!paymentModalOpen) return; // only run when modal just opened
+
+        if (paymentEditing) {
+            setLocalPaymentForm({
+                type: paymentEditing.type,
+                method: paymentEditing.method,
+                date: paymentEditing.date,
+                amount: Number(paymentEditing.amount || 0),
+            });
+        } else {
+            setLocalPaymentForm({
+                type: "Advance",
+                method: "Cash",
+                date: dayjs().format("YYYY-MM-DD"),
+                amount: 0,
+            });
+        }
+    }, [paymentModalOpen]); // 👈 only depend on modal open/close
+
+
+
 
     const CardToggle = ({ options, value, onChange }) => (
         <div className="flex gap-2">
             {options.map((opt) => {
-                const active = value === opt;
+                const active = value?.toLowerCase() === opt.toLowerCase();
                 return (
                     <button
                         key={opt}
                         type="button"
                         onClick={() => onChange(opt)}
                         className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-2
-              ${active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+            ${active
+                                ? 'bg-slate-900 text-white border-slate-900'
+                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
                     >
-                        {opt === 'Cash' && <Icon icon="lucide:banknote" className="w-4 h-4" />}
-                        {opt === 'Card' && <Icon icon="lucide:credit-card" className="w-4 h-4" />}
-                        {opt === 'Bank Transfer' && <Icon icon="lucide:send-horizontal" className="w-4 h-4" />}
-                        {opt === 'Advance' && <Icon icon="lucide:arrow-down-circle" className="w-4 h-4" />}
-                        {opt === 'Settlement' && <Icon icon="lucide:check-circle" className="w-4 h-4" />}
+                        {/* <Icon icon={icons[opt]} className="w-4 h-4" /> */}
                         <span>{opt}</span>
+
                     </button>
                 );
             })}
         </div>
     );
+
 
     // Group foods by category for a nicer dropdown
     const foodGroups = useMemo(() => {
@@ -243,8 +276,8 @@ export default function ReservationModals() {
                                 <label className="text-sm text-slate-600 mb-1 block">Type</label>
                                 <CardToggle
                                     options={['Advance', 'Settlement']}
-                                    value={paymentForm.type}
-                                    onChange={(v) => setPaymentForm({ ...paymentForm, type: v })}
+                                    value={localPaymentForm.type}
+                                    onChange={(v) => setLocalPaymentForm(f => ({ ...f, type: v }))}
                                 />
                             </div>
 
@@ -253,8 +286,8 @@ export default function ReservationModals() {
                                 <label className="text-sm text-slate-600 mb-1 block">Method</label>
                                 <CardToggle
                                     options={['Cash', 'Card', 'Bank Transfer']}
-                                    value={paymentForm.method}
-                                    onChange={(v) => setPaymentForm({ ...paymentForm, method: v })}
+                                    value={localPaymentForm.method}
+                                    onChange={(v) => setLocalPaymentForm(f => ({ ...f, method: v }))}
                                 />
                             </div>
 
@@ -262,18 +295,16 @@ export default function ReservationModals() {
                                 <label className="text-sm text-slate-600">Date</label>
                                 <input
                                     type="date"
-                                    value={paymentForm.date}
-                                    onChange={(e) => setPaymentForm({ ...paymentForm, date: e.target.value })}
-                                    className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                                    value={localPaymentForm.date}
+                                    onChange={(e) => setLocalPaymentForm(f => ({ ...f, date: e.target.value }))}
                                 />
                             </div>
                             <div>
                                 <label className="text-sm text-slate-600">Amount</label>
                                 <input
                                     type="number"
-                                    value={paymentForm.amount}
-                                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
-                                    className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                                    value={localPaymentForm.amount}
+                                    onChange={(e) => setLocalPaymentForm(f => ({ ...f, amount: Number(e.target.value) }))}
                                 />
                             </div>
                         </div>
@@ -286,12 +317,13 @@ export default function ReservationModals() {
                                 Cancel
                             </button>
                             <button
-                                onClick={savePayment}
+                                onClick={() => savePayment(localPaymentForm)}
                                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-                                disabled={paymentForm.amount <= 0}
+                                disabled={localPaymentForm.amount <= 0}
                             >
                                 Save
                             </button>
+
                         </div>
                     </div>
 

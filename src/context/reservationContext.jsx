@@ -177,11 +177,12 @@ export function ReservationProvider({ initialReservation, children }) {
             if (paymentEditing) {
                 setPaymentForm({
                     _id: paymentEditing._id,
-                    type: paymentEditing.type,
-                    method: paymentEditing.method,
+                    type: paymentEditing.type === 'advance' ? 'Advance' : paymentEditing.type,
+                    method: paymentEditing.method === 'cash' ? 'Cash' : paymentEditing.method,
                     date: paymentEditing.date,
                     amount: Number(paymentEditing.amount || 0),
                 });
+
             } else {
                 setPaymentForm({
                     type: 'Advance',
@@ -199,9 +200,15 @@ export function ReservationProvider({ initialReservation, children }) {
         [initialReservation]
     );
     const roomCharges = useMemo(
-        () => (initialReservation.rooms || []).reduce((sum, r) => sum + (Number(r.price || 0) * nights), 0),
+        () => (initialReservation.rooms || []).reduce((sum, r) => {
+            const rate = Number(r.nightlyRate || r.price || 0); // 👈 prefer nightlyRate if exists
+            return sum + (rate * nights);
+        }, 0),
         [initialReservation.rooms, nights]
     );
+
+
+
     const otherCharges = useMemo(
         () => [...services, ...foods].reduce((sum, x) => sum + Number(x.amount || 0), 0),
         [services, foods]
@@ -296,12 +303,12 @@ export function ReservationProvider({ initialReservation, children }) {
     const openAddPayment = () => { setPaymentEditing(null); setPaymentModalOpen(true); };
     const openEditPayment = (p) => { setPaymentEditing(p); setPaymentModalOpen(true); };
 
-    const savePayment = async () => {
+    const savePayment = async (form) => {
         const rec = {
-            type: paymentForm.type,
-            method: paymentForm.method,
-            date: paymentForm.date,
-            amount: Number(paymentForm.amount || 0),
+            type: form.type,
+            method: form.method,
+            date: form.date,
+            amount: Number(form.amount || 0),
         };
 
         if (!initialReservation?.id) {
@@ -375,7 +382,7 @@ export function ReservationProvider({ initialReservation, children }) {
             startY: 68,
             head: [['Room', 'Type', 'Rate (LKR)', 'Nights', 'Amount (LKR)']],
             body: (res.rooms || []).map((r) => {
-                const rate = Number(r.price || 0);
+                const rate = Number(r.nightlyRate || r.price || 0);
                 return [
                     (r.roomNumber || r.number || '—'),
                     (r.type || '—'),
@@ -384,6 +391,7 @@ export function ReservationProvider({ initialReservation, children }) {
                     formatLKR(n * rate),
                 ];
             }),
+
             theme: 'grid',
             styles: { fontSize: 9 },
             headStyles: { fillColor: [15, 23, 42] },

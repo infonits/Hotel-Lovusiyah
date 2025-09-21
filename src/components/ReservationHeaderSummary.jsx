@@ -90,12 +90,34 @@ export default function ReservationHeaderSummary() {
                     {/* Rooms */}
                     <div className="p-4 rounded-xl border border-slate-200 bg-white/70">
                         <div className="text-xs text-slate-500">Rooms</div>
-                        <div className="font-semibold text-slate-800">
-                            {(reservation?.rooms || []).map((r) => r.roomNumber).join(', ') || '-'}
-                        </div>
+
+                        {reservation?.rooms?.length > 0 ? (
+                            <ul className="space-y-1">
+                                {reservation.rooms.map((r) => (
+                                    <li key={r._id} className="flex justify-between text-sm">
+                                        <span>Room {r.roomNumber} · {r.type}</span>
+                                        <span>
+                                            {r.nightlyRate && r.nightlyRate !== r.price ? (
+                                                <>
+                                                    <s className="text-slate-400">{formatLKR(r.price)}</s>{" "}
+                                                    {formatLKR(r.nightlyRate)}
+                                                </>
+                                            ) : (
+                                                formatLKR(r.nightlyRate || r.price)
+                                            )}
+                                            / night
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div className="font-semibold text-slate-800">-</div>
+                        )}
+
                         <div className="text-sm text-slate-600">
                             {reservation?.rooms?.length || 0} room(s)
                         </div>
+
                     </div>
                 </div>
 
