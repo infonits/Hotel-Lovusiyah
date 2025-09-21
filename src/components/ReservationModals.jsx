@@ -27,6 +27,7 @@ export default function ReservationModals() {
         // 👇 Add setPaymentModalOpen here
         paymentEditing, setPaymentEditing, paymentModalOpen, setPaymentModalOpen,
         savePayment,
+        balance
     } = useReservation();
 
 
@@ -277,8 +278,15 @@ export default function ReservationModals() {
                                 <CardToggle
                                     options={['Advance', 'Settlement']}
                                     value={localPaymentForm.type}
-                                    onChange={(v) => setLocalPaymentForm(f => ({ ...f, type: v }))}
+                                    onChange={(v) => {
+                                        if (v === 'Settlement') {
+                                            setLocalPaymentForm(f => ({ ...f, type: v, amount: balance }));
+                                        } else {
+                                            setLocalPaymentForm(f => ({ ...f, type: v, amount: 0 }));
+                                        }
+                                    }}
                                 />
+
                             </div>
 
                             {/* Method: Cash / Card / Bank Transfer */}
@@ -296,17 +304,31 @@ export default function ReservationModals() {
                                 <input
                                     type="date"
                                     value={localPaymentForm.date}
-                                    onChange={(e) => setLocalPaymentForm(f => ({ ...f, date: e.target.value }))}
+                                    onChange={(e) =>
+                                        setLocalPaymentForm(f => ({ ...f, date: e.target.value }))
+                                    }
+                                    className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50
+               text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 
+               focus:border-emerald-500"
                                 />
                             </div>
+
                             <div>
                                 <label className="text-sm text-slate-600">Amount</label>
                                 <input
                                     type="number"
                                     value={localPaymentForm.amount}
-                                    onChange={(e) => setLocalPaymentForm(f => ({ ...f, amount: Number(e.target.value) }))}
+                                    disabled={localPaymentForm.type === 'Settlement'} // 👈 disable if settlement
+                                    onChange={(e) =>
+                                        setLocalPaymentForm(f => ({ ...f, amount: Number(e.target.value) }))
+                                    }
+                                    className={`mt-1 w-full px-4 py-2 rounded-lg border ${localPaymentForm.type === 'Settlement'
+                                        ? 'bg-slate-100 text-slate-600 cursor-not-allowed'
+                                        : 'border-slate-200 bg-white/50'
+                                        }`}
                                 />
                             </div>
+
                         </div>
 
                         <div className="mt-6 flex items-center justify-end gap-2">
