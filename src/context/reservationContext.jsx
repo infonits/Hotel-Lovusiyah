@@ -64,7 +64,7 @@ export function ReservationProvider({ initialReservation, children }) {
                 if (menuErr) throw menuErr;
 
                 if (!alive) return;
-                setServiceCatalog((svc || []).map(s => ({ id: s.id, title: s.name, rate: formatLKR(s.price || 0) })));
+                setServiceCatalog((svc || []).map(s => ({ id: s.id, title: s.name, rate: Number(s.price || 0) })));
                 setFoodCatalog((menus || []).map(m => ({ id: m.id, title: m.name, rate: Number(m.price || 0), category: m.category })));
             } catch (e) {
                 console.error('Catalog load failed:', e);
@@ -427,8 +427,53 @@ export function ReservationProvider({ initialReservation, children }) {
                 styles: { fontSize: 9 },
                 headStyles: { fillColor: [15, 23, 42] },
             });
+            let y = (doc.lastAutoTable?.finalY ?? 68) + 8;
 
-            let y = (doc.lastAutoTable?.finalY ?? currentY) + 10;
+            // Services
+            doc.text('Services', 14, y);
+            autoTable(doc, {
+                startY: y + 4,
+                head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
+                body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
+                    s.title, s.qty, Number(s.rate || 0).toFixed(2), Number(s.amount || 0).toFixed(2)
+                ]),
+                theme: 'grid',
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [15, 23, 42] },
+            });
+
+            y = (doc.lastAutoTable?.finalY ?? y) + 8;
+
+            // Foods
+            doc.text('Foods', 14, y);
+            autoTable(doc, {
+                startY: y + 4,
+                head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
+                body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
+                    f.title, f.qty, Number(f.rate || 0).toFixed(2), Number(f.amount || 0).toFixed(2)
+                ]),
+                theme: 'grid',
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [15, 23, 42] },
+            });
+
+            y = (doc.lastAutoTable?.finalY ?? y) + 8;
+
+            // Payments
+            doc.text('Payments', 14, y);
+            autoTable(doc, {
+                startY: y + 4,
+                head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
+                body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
+                    p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), Number(p.amount || 0).toFixed(2)
+                ]),
+                theme: 'grid',
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [15, 23, 42] },
+            });
+
+            y = (doc.lastAutoTable?.finalY ?? y) + 10;
+
 
             autoTable(doc, {
                 startY: y,
