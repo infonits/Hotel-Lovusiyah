@@ -26,7 +26,7 @@ export default function ReservationModals() {
 
         // 👇 Add setPaymentModalOpen here
         paymentEditing, setPaymentEditing, paymentModalOpen, setPaymentModalOpen,
-        savePayment,
+        savePayment, checkoutReservation,
         balance
     } = useReservation();
 
@@ -392,7 +392,19 @@ export default function ReservationModals() {
                             >
                                 Save
                             </button>
+                            {localPaymentForm.type === 'Settlement' && (
 
+                                <button
+                                    onClick={async () => {
+                                        await savePayment(localPaymentForm);
+                                        await checkoutReservation();   // 👈 call new function
+                                        setPaymentModalOpen(false);
+                                    }}
+                                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+                                    disabled={localPaymentForm.amount <= 0}
+                                >
+                                    Save & Checkout
+                                </button>)}
                         </div>
                     </div>
 

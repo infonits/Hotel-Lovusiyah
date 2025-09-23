@@ -338,6 +338,25 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     };
 
+    // inside ReservationProvider
+
+    const checkoutReservation = async () => {
+        if (!reservation?.id) return;
+        try {
+            const { error } = await supabase
+                .from("reservations")
+                .update({ status: "checked_out" })
+                .eq("id", reservation.id);
+
+            if (error) throw error;
+
+            setReservation(prev => prev ? { ...prev, status: "checked_out" } : prev);
+        } catch (e) {
+            console.error("Checkout failed:", e);
+        }
+    };
+
+
     const deletePayment = async (id) => {
         if (!initialReservation?.id) { setPayments(prev => prev.filter(x => x._id !== id)); return; }
         setPaymentsLoading(true);
@@ -584,7 +603,7 @@ export function ReservationProvider({ initialReservation, children }) {
 
         // totals
         nights, roomCharges, otherCharges, total, paid, balance,
-
+        checkoutReservation,
         // handlers
         openAddService, openAddFood, openEditService, openEditFood, saveItem, deleteService, deleteFood,
         openAddPayment, openEditPayment, savePayment, deletePayment,
