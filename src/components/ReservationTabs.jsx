@@ -99,7 +99,7 @@ export default function ReservationTabs() {
                                     <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No services added.</td>
                                 </tr>
                             ) : services.map((s) => (
-                                <tr key={s._id} className="border-b last:border-0">
+                                <tr key={s._id} className="border-b border-slate-100 last:border-0">
                                     <td className="px-4 py-3 text-slate-800">{s.title}</td>
                                     <td className="px-4 py-3 text-slate-600">{s.qty}</td>
                                     <td className="px-4 py-3 text-slate-600">
@@ -147,7 +147,7 @@ export default function ReservationTabs() {
                                     <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No foods added.</td>
                                 </tr>
                             ) : foods.map((f) => (
-                                <tr key={f._id} className="border-b last:border-0">
+                                <tr key={f._id} className="border-b border-slate-100 last:border-0">
                                     <td className="px-4 py-3 text-slate-800">{f.title}</td>
                                     <td className="px-4 py-3 text-slate-600">{f.qty}</td>
                                     <td className="px-4 py-3 text-slate-600">
@@ -200,7 +200,7 @@ export default function ReservationTabs() {
                                 </tr>
                             ) : (
                                 payments.map((p) => (
-                                    <tr key={p._id} className="border-b last:border-0">
+                                    <tr key={p._id} className="border-b border-slate-100 last:border-0">
                                         <td className="px-4 py-3 text-slate-800">{p.type}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.method}</td>
                                         <td className="px-4 py-3 text-slate-600">{dayjs(p.date).format('YYYY-MM-DD')}</td>
