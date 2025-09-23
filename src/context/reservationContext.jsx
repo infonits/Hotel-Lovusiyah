@@ -360,116 +360,113 @@ export function ReservationProvider({ initialReservation, children }) {
         const doc = new jsPDF();
         const res = initialReservation || {};
         const n = nights;
+        const img = new Image();
+        img.src = "/logo.png"; // public/logo.png
+        img.onload = () => {
+            // Logo + Hotel title
+            doc.addImage(img, "PNG", 14, 14, 15, 15);
 
-        doc.setFontSize(22);
-        doc.text('Hotel Lovusiyah ', 14, 16);
-        doc.setFontSize(10);
-        doc.text(`Date: ${dayjs().format('YYYY-MM-DD HH:mm')}`, 200 - 14, 22, { align: 'right' });
+            // Hotel Name
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.text("Hotel Lovusiyah", 34, 18);
 
-        doc.setFontSize(12);
-        doc.text('Guest & Stay', 14, 32);
-        doc.setFontSize(10);
-        [
-            `Guest: ${res.guest?.name || '-'} (${res.guest?.nicNumber || '-'})`,
-            `Phone: ${res.guest?.phone || '-'}   Email: ${res.guest?.email || '-'}`,
-            `Check-in: ${dayjs(res.checkInDate).format('YYYY-MM-DD')}   Check-out: ${dayjs(res.checkOutDate).format('YYYY-MM-DD')}`,
-            `Rooms: ${(res.rooms || []).map(r => (r.roomNumber || r.number || '—')).join(', ') || '-'}`,
-            `Nights: ${n}`,
-        ].forEach((l, i) => doc.text(l, 14, 38 + i * 6));
+            // Address & Phone (smaller, below name)
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text("Power House Rd, Jaffna", 34, 24);
+            doc.text("Phone: 0212 221 326", 34, 29);
 
-        // Rooms
-        autoTable(doc, {
-            startY: 68,
-            head: [['Room', 'Type', 'Rate (LKR)', 'Nights', 'Amount (LKR)']],
-            body: (res.rooms || []).map((r) => {
-                const rate = Number(r.nightlyRate || r.price || 0);
-                return [
-                    (r.roomNumber || r.number || '—'),
-                    (r.type || '—'),
-                    formatLKR(rate),
-                    n,
-                    formatLKR(n * rate),
-                ];
-            }),
+            // Date (right side, aligned with header block)
+            doc.setFontSize(10);
+            doc.text(`Date: ${dayjs().format('YY/MM/DD HH:mm')}`, 200 - 14, 18, { align: 'right' });
+            let currentY = 35;
 
-            theme: 'grid',
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [15, 23, 42] },
-        });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            doc.setDrawColor(150);   // grey color (0=black, 255=white)
+            doc.setLineWidth(0.3);   // thin line
+            doc.line(14, currentY, pageWidth - 14, currentY); // x1, y1, x2, y2
+            // Section spacing
+            currentY += 10; // add space below line
 
-        let y = (doc.lastAutoTable?.finalY ?? 68) + 8;
+            // Guest & Stay
+            doc.setFont("helvetica", "bold");
 
-        // Services
-        if (services.length) {
-            doc.text('Services', 14, y);
+            doc.setFontSize(12);
+            doc.text('Guest & Stay', 14, currentY);
+            doc.setFont("helvetica", "normal");
+
+            doc.setFontSize(10);
+
+            [
+                `Guest: ${res.guest?.name || 'N/A'} (${res.guest?.nicNumber || 'N/A'})`,
+                `Phone: ${res.guest?.phone || 'N/A'} | Email: ${res.guest?.email || 'N/A'}`,
+                `Arrival: ${dayjs(res.checkInDate).format('YY/MM/DD')}   `,
+                `Depature: ${dayjs(res.checkOutDate).format('YY/MM/DD')}`,
+                `Rooms: ${(res.rooms || []).map(r => (r.roomNumber || r.number || '—')).join(', ') || '-'}`,
+                `Nights: ${n}`,
+            ].forEach((l, i) => doc.text(l, 14, currentY + 6 + i * 6));
+
+            currentY += 42;
+
+            // Rooms
             autoTable(doc, {
-                startY: y + 4,
-                head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-                body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
-                    s.title, s.qty, formatLKR(s.rate), formatLKR(s.amount)
-                ]),
+                startY: currentY,
+                head: [['Room', 'Type', 'Rate (LKR)', 'Nights', 'Amount (LKR)']],
+                body: (res.rooms || []).map((r) => {
+                    const rate = Number(r.nightlyRate || r.price || 0);
+                    return [
+                        (r.roomNumber || r.number || '—'),
+                        (r.type || '—'),
+                        formatLKR(rate),
+                        n,
+                        formatLKR(n * rate),
+                    ];
+                }),
                 theme: 'grid',
                 styles: { fontSize: 9 },
                 headStyles: { fillColor: [15, 23, 42] },
             });
 
-            y = (doc.lastAutoTable?.finalY ?? y) + 8;
-        }
-        // Foods
-        if (foods.length) {
-            doc.text('Foods', 14, y);
+            let y = (doc.lastAutoTable?.finalY ?? currentY) + 10;
+
             autoTable(doc, {
-                startY: y + 4,
-                head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-                body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
-                    f.title, f.qty, formatLKR(f.rate), formatLKR(f.amount)
-                ]),
-                theme: 'grid',
-                styles: { fontSize: 9 },
-                headStyles: { fillColor: [15, 23, 42] },
+                startY: y,
+                head: [[
+                    { content: 'Description', styles: { halign: 'left' } },
+                    { content: 'Amount (LKR)', styles: { halign: 'right' } }
+                ]],
+                body: [
+                    ['Room Charges', formatLKR(roomCharges)],
+                    ['Other Charges', formatLKR(otherCharges)],
+                    [
+                        { content: 'Total', styles: { fontStyle: 'bold', halign: 'left' } },
+                        { content: formatLKR(total), styles: { fontStyle: 'bold', halign: 'right' } }
+                    ],
+                    ['Paid', formatLKR(paid)],
+                ],
+                theme: 'plain',
+                styles: { fontSize: 10 },
+                columnStyles: {
+                    0: { halign: 'left' },  // Description column
+                    1: { halign: 'right' }  // Amount column (body)
+                },
             });
 
-            y = (doc.lastAutoTable?.finalY ?? y) + 8;
-        }
 
-        // Payments
+            // Footer (centered)
+            const pageHeight = doc.internal.pageSize.height;
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text("Digital invoice from Hotel Lovusiyah", doc.internal.pageSize.width / 2, pageHeight - 20, { align: 'center' });
+            doc.text("Smart hotel management solution by Infonits.", doc.internal.pageSize.width / 2, pageHeight - 14, { align: 'center' });
 
-        if (payments.length) {
-            doc.text('Payments', 14, y);
-            autoTable(doc, {
-                startY: y + 4,
-                head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
-                body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
-                    p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), formatLKR(p.amount)
-                ]),
-                theme: 'grid',
-                styles: { fontSize: 9 },
-                headStyles: { fillColor: [15, 23, 42] },
-            });
+            // Print preview
+            const blobUrl = doc.output('bloburl');
+            const win = window.open(blobUrl);
+            win.onload = () => win.print();
+        };
 
-            y = (doc.lastAutoTable?.finalY ?? y) + 10;
-        }
-        autoTable(doc, {
-            startY: y + 6,
-            head: [['Description', 'Amount (LKR)']],
-            body: [
-                ['Room Charges', formatLKR(roomCharges)],
-                ['Other Charges', formatLKR(otherCharges)],
-                ['Total', formatLKR(total)],
-                ['Paid', formatLKR(paid)],
-                ['Balance', formatLKR(balance)],
-            ],
-            theme: 'plain',
-            styles: { fontSize: 10 },
-            columnStyles: {
-                0: { halign: 'left' },
-                1: { halign: 'right' },
-            },
-        });
-
-        // ⬇️ Instead of saving, open print preview
-        const blobUrl = doc.output('bloburl');
-        const win = window.open(blobUrl);
         win.onload = () => {
             win.print();
         };
