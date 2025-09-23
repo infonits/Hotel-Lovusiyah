@@ -430,66 +430,77 @@ export function ReservationProvider({ initialReservation, children }) {
             let y = (doc.lastAutoTable?.finalY ?? 68) + 8;
 
             // Services
-            doc.text('Services', 14, y);
-            autoTable(doc, {
-                startY: y + 4,
-                head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-                body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
-                    s.title, s.qty, Number(s.rate || 0).toFixed(2), Number(s.amount || 0).toFixed(2)
-                ]),
-                theme: 'grid',
-                styles: { fontSize: 9 },
-                headStyles: { fillColor: [15, 23, 42] },
-            });
+            if (services.length) {
+                doc.text('Services', 14, y);
+                autoTable(doc, {
+                    startY: y + 4,
+                    head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
+                    body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
+                        s.title, s.qty, Number(s.rate || 0).toFixed(2), Number(s.amount || 0).toFixed(2)
+                    ]),
+                    theme: 'grid',
+                    styles: { fontSize: 9 },
+                    headStyles: { fillColor: [15, 23, 42] },
+                });
 
-            y = (doc.lastAutoTable?.finalY ?? y) + 8;
+                y = (doc.lastAutoTable?.finalY ?? y) + 8;
+            }
 
             // Foods
-            doc.text('Foods', 14, y);
-            autoTable(doc, {
-                startY: y + 4,
-                head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-                body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
-                    f.title, f.qty, Number(f.rate || 0).toFixed(2), Number(f.amount || 0).toFixed(2)
-                ]),
-                theme: 'grid',
-                styles: { fontSize: 9 },
-                headStyles: { fillColor: [15, 23, 42] },
-            });
 
-            y = (doc.lastAutoTable?.finalY ?? y) + 8;
+            if (foods.length) {
+                doc.text('Foods', 14, y);
+                autoTable(doc, {
+                    startY: y + 4,
+                    head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
+                    body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
+                        f.title, f.qty, Number(f.rate || 0).toFixed(2), Number(f.amount || 0).toFixed(2)
+                    ]),
+                    theme: 'grid',
+                    styles: { fontSize: 9 },
+                    headStyles: { fillColor: [15, 23, 42] },
+                });
 
+                y = (doc.lastAutoTable?.finalY ?? y) + 8;
+            }
             // Payments
-            doc.text('Payments', 14, y);
-            autoTable(doc, {
-                startY: y + 4,
-                head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
-                body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
-                    p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), Number(p.amount || 0).toFixed(2)
-                ]),
-                theme: 'grid',
-                styles: { fontSize: 9 },
-                headStyles: { fillColor: [15, 23, 42] },
-            });
 
-            y = (doc.lastAutoTable?.finalY ?? y) + 10;
+            if (payments.length) {
+                doc.text('Payments', 14, y);
+                autoTable(doc, {
+                    startY: y + 4,
+                    head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
+                    body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
+                        p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), Number(p.amount || 0).toFixed(2)
+                    ]),
+                    theme: 'grid',
+                    styles: { fontSize: 9 },
+                    headStyles: { fillColor: [15, 23, 42] },
+                });
 
+                y = (doc.lastAutoTable?.finalY ?? y) + 10;
+            }
+            const totalsBody = [
+                ['Room Charges', formatLKR(roomCharges)],
+                ['Other Charges', formatLKR(otherCharges)],
+                [
+                    { content: 'Total', styles: { fontStyle: 'bold', halign: 'left' } },
+                    { content: formatLKR(total), styles: { fontStyle: 'bold', halign: 'right' } }
+                ],
+                ['Paid', formatLKR(paid)],
+            ];
 
+            // ✅ Only add Balance row if balance exists and > 0
+            if (balance && balance > 0) {
+                totalsBody.push(['Balance', formatLKR(balance)]);
+            }
             autoTable(doc, {
                 startY: y,
                 head: [[
                     { content: 'Description', styles: { halign: 'left' } },
                     { content: 'Amount (LKR)', styles: { halign: 'right' } }
                 ]],
-                body: [
-                    ['Room Charges', formatLKR(roomCharges)],
-                    ['Other Charges', formatLKR(otherCharges)],
-                    [
-                        { content: 'Total', styles: { fontStyle: 'bold', halign: 'left' } },
-                        { content: formatLKR(total), styles: { fontStyle: 'bold', halign: 'right' } }
-                    ],
-                    ['Paid', formatLKR(paid)],
-                ],
+                body: totalsBody,
                 theme: 'plain',
                 styles: { fontSize: 10 },
                 columnStyles: {
