@@ -383,7 +383,7 @@ export function ReservationProvider({ initialReservation, children }) {
         img.src = "/logo.png"; // public/logo.png
         img.onload = () => {
             // Logo + Hotel title
-            doc.addImage(img, "PNG", 14, 14, 15, 15);
+            doc.addImage(img, "PNG", 14, 10, 20, 20);
 
             // Hotel Name
             doc.setFont("helvetica", "bold");
@@ -528,13 +528,49 @@ export function ReservationProvider({ initialReservation, children }) {
                 },
             });
 
+            y = (doc.lastAutoTable?.finalY ?? y) + 8;
 
-            // Footer (centered)
+            // Footer (Signatures + Notes)
             const pageHeight = doc.internal.pageSize.height;
+
+            // --- Signatures ---
+            const marginX = 14;
+            const centerY = pageHeight - 40; // position above footer
+
+            // Manager (left side)
+            doc.setFontSize(10);
+            doc.setTextColor(0);
+            doc.text("....................", marginX, centerY);
+            doc.text("Receptionist ", marginX, centerY + 6);
+
+            // User/Guest (right side)
+            doc.text("....................", pageWidth - marginX - 30, centerY);
+            doc.text("Guest", pageWidth - marginX - 25, centerY + 6);
+
+            // --- Bank Details ---
+            y += 10; // spacing after totals
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.text("Bank Details", 14, y);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+
+            [
+                `Bank: Commercial Bank`,
+                `Account Name: HOTEL LOVUSIYAH PVT LTD`,
+                `Account No: 1000585733`,
+                `Branch: Jaffna`
+            ].forEach((line, i) => doc.text(line, 14, y + 6 + i * 6));
+
+            y += 36; // leave space after bank details
+
+
+
+            // --- Footer (centered below) ---
             doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.text("Digital invoice from Hotel Lovusiyah", doc.internal.pageSize.width / 2, pageHeight - 20, { align: 'center' });
-            doc.text("Smart hotel management solution by Infonits.", doc.internal.pageSize.width / 2, pageHeight - 14, { align: 'center' });
+            doc.text("Digital invoice from Hotel Lovusiyah", pageWidth / 2, pageHeight - 20, { align: 'center' });
+            doc.text("Smart hotel management solution by Infonits.", pageWidth / 2, pageHeight - 14, { align: 'center' });
 
             // Print preview
             const blobUrl = doc.output('bloburl');
