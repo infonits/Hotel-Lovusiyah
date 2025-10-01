@@ -10,18 +10,18 @@ export default function ReservationTabs() {
     const {
         // state
         tab, setTab,
-        services, foods, payments,
+        services, foods, payments, discounts, openAddDiscount,
 
 
         // item handlers (from provider)
         openAddService, openAddFood, openEditService, openEditFood, deleteService, deleteFood,
 
         // payment handlers (from provider)
-        openAddPayment, openEditPayment, deletePayment,
+        openAddPayment, openEditPayment, deletePayment, deleteDiscount,
 
         // catalogs (Supabase-backed) + loaders
         serviceCatalog, foodCatalog, catalogLoading,
-        paymentsLoading,
+        paymentsLoading, discountsLoading, openEditDiscount,
 
         // modal controls to support Quick Add prefill
         setItemMode, setItemForm, setItemModalOpen,
@@ -45,7 +45,7 @@ export default function ReservationTabs() {
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mt-6">
             <div className="flex items-center justify-between">
                 <div className="flex flex-wrap gap-2">
-                    {['services', 'foods', 'payments'].map((id) => (
+                    {['services', 'foods', 'payments', 'discounts'].map((id) => (
                         <button
                             key={id}
                             onClick={() => setTab(id)}
@@ -55,26 +55,35 @@ export default function ReservationTabs() {
                             {id === 'services' && <Icon icon="lucide:concierge-bell" className="w-4 h-4" />}
                             {id === 'foods' && <Icon icon="lucide:utensils" className="w-4 h-4" />}
                             {id === 'payments' && <Icon icon="lucide:wallet" className="w-4 h-4" />}
+                            {id === 'discounts' && <Icon icon="iconamoon:discount-duotone" className="w-4 h-4" />}
                             {id[0].toUpperCase() + id.slice(1)}
                         </button>
                     ))}
                 </div>
 
-                {tab !== 'payments' ? (
-                    <button
-                        onClick={() => (tab === 'services' ? openAddService() : openAddFood())}
-                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
-                    >
-                        <Icon icon="lucide:plus" className="w-4 h-4" /> Add {tab === 'services' ? 'Service' : 'Food'}
-                    </button>
-                ) : (
+                {tab === 'payments' ? (
                     <button
                         onClick={openAddPayment}
                         className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
                     >
                         <Icon icon="lucide:plus" className="w-4 h-4" /> Add Payment
                     </button>
+                ) : tab === 'discounts' ? (
+                    <button
+                        onClick={openAddDiscount}
+                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
+                    >
+                        <Icon icon="lucide:plus" className="w-4 h-4" /> Add Discount
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => (tab === 'services' ? openAddService() : openAddFood())}
+                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
+                    >
+                        <Icon icon="lucide:plus" className="w-4 h-4" /> Add {tab === 'services' ? 'Service' : 'Food'}
+                    </button>
                 )}
+
             </div>
 
 
@@ -211,6 +220,53 @@ export default function ReservationTabs() {
                                                     <Icon icon="lucide:square-pen" className="w-4 h-4" />
                                                 </button>
                                                 <button onClick={() => deletePayment(p._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
+                                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {tab === 'discounts' && (
+                <div className="mt-4 overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead>
+                            <tr className="text-left text-sm text-slate-500">
+                                <th className="px-4 py-2 font-medium">Name</th>
+                                <th className="px-4 py-2 font-medium">Date</th>
+                                <th className="px-4 py-2 font-medium">Value</th>
+                                <th className="px-4 py-2 font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {discountsLoading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm flex items-center gap-2">
+                                        <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" />
+                                        Loading Discounts
+                                    </td>
+                                </tr>
+                            ) : discounts.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-6 text-slate-500 text-sm">No discounts recorded.</td>
+                                </tr>
+                            ) : (
+                                discounts.map((d) => (
+                                    <tr key={d._id} className="border-b border-slate-100 last:border-0">
+                                        <td className="px-4 py-3 text-slate-800">{d.name}</td>
+                                        <td className="px-4 py-3 text-slate-600">{dayjs(d.date).format('YYYY-MM-DD')}</td>
+                                        <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(d.amount)}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex gap-2">
+                                                <button onClick={() => openEditDiscount(d)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
+                                                    <Icon icon="lucide:square-pen" className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => deleteDiscount(d._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
                                                     <Icon icon="lucide:trash-2" className="w-4 h-4" />
                                                 </button>
                                             </div>

@@ -24,8 +24,9 @@ export function ReservationProvider({ initialReservation, children }) {
 
     // Payments (persisted in Supabase)
     const [payments, setPayments] = useState([]);
+    const [discounts, setDiscounts] = useState([]);
     const [paymentsLoading, setPaymentsLoading] = useState(true);
-
+    const [discountsLoading, setDiscountsLoading] = useState(true)
     // Tabs
     const [tab, setTab] = useState('services');
 
@@ -44,6 +45,10 @@ export function ReservationProvider({ initialReservation, children }) {
         date: dayjs().format('YYYY-MM-DD'),
         amount: 0,
     });
+    // discount modal 
+    const [discountModalOpen, setDiscountModalOpen] = useState(false);
+    const [discountEditing, setDiscountEditing] = useState(null);
+    const [discountForm, setDiscountForm] = useState({ name: '', amount: 0 });
 
     /* ---------- Catalogs ---------- */
     useEffect(() => {
@@ -147,7 +152,33 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     }, [initialReservation?.id]);
 
+    const reloadDiscounts = useCallback(async () => {
+        if (!initialReservation?.id) { setDiscounts([]); setDiscountsLoading(false); return; }
+        setDiscountsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('discounts')
+                .select('id, name, amount, created_at')
+                .eq('reservation_id', initialReservation.id)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+
+            setDiscounts((data || []).map(d => ({
+                id: d.id,
+                name: d.name,
+                date: d.created_at,
+                amount: Number(d.amount || 0),
+            })));
+        } catch (e) {
+            console.error('Discounts load failed:', e);
+            setDiscounts([]);
+        } finally {
+            setDiscountsLoading(false);
+        }
+    }, [initialReservation?.id]);
+
     useEffect(() => { reloadPayments(); }, [reloadPayments]);
+    useEffect(() => { reloadDiscounts(); }, [reloadDiscounts]);
 
     /* ---------- Item form helpers ---------- */
     useEffect(() => {
@@ -194,26 +225,55 @@ export function ReservationProvider({ initialReservation, children }) {
         }
     }, [paymentModalOpen, paymentEditing]);
 
+    useEffect(() => {
+        if (!discountModalOpen) return;
+        if (discountEditing) {
+            setDiscountForm({
+                id: discountEditing.id,
+                name: discountEditing.name || '',
+                amount: Number(discountEditing.amount || 0),
+            });
+        } else {
+            setDiscountForm({ name: '', amount: 0 });
+        }
+    }, [discountModalOpen, discountEditing]);
+
+
     /* ---------- Totals ---------- */
+    const effectiveRes = reservation || initialReservation || {};
+
     const nights = useMemo(
-        () => dayjs(initialReservation.checkOutDate).diff(dayjs(initialReservation.checkInDate), 'day'),
-        [initialReservation]
+        () => dayjs(effectiveRes.checkOutDate).diff(dayjs(effectiveRes.checkInDate), 'day'),
+        [effectiveRes.checkInDate, effectiveRes.checkOutDate]
     );
+
     const roomCharges = useMemo(
-        () => (initialReservation.rooms || []).reduce((sum, r) => {
-            const rate = Number(r.nightlyRate || r.price || 0); // 👈 prefer nightlyRate if exists
+        () => (effectiveRes.rooms || []).reduce((sum, r) => {
+            const rate = Number(r.nightlyRate || r.price || 0);
             return sum + (rate * nights);
         }, 0),
-        [initialReservation.rooms, nights]
+        [effectiveRes.rooms, nights]
     );
+
 
 
 
     const otherCharges = useMemo(
         () => [...services, ...foods].reduce((sum, x) => sum + Number(x.amount || 0), 0),
         [services, foods]
+
     );
-    const total = useMemo(() => roomCharges + otherCharges, [roomCharges, otherCharges]);
+
+    const discountTotal = useMemo(
+        () => discounts.reduce((sum, d) => sum + Number(d.amount || 0), 0),
+        [discounts]
+    );
+
+    const total = useMemo(
+        () => Math.max(0, roomCharges + otherCharges - discountTotal),
+        [roomCharges, otherCharges, discountTotal]
+    );
+
     const paid = useMemo(() => payments.reduce((sum, p) => sum + Number(p.amount || 0), 0), [payments]);
     const balance = useMemo(() => Math.max(0, total - paid), [total, paid]);
 
@@ -234,17 +294,18 @@ export function ReservationProvider({ initialReservation, children }) {
         // Local fallback if no reservation id
         if (!initialReservation?.id) {
             const local = {
-                _id: itemForm._id || `${itemMode}-${(crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 9))}`,
-                ...rec,
+                _id: discountForm?._id || `disc-${(crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 9))}`,
+                name: form.name,
+                amount: Number(form.amount || 0),
+                date: new Date().toISOString(),
             };
-            if (itemMode === 'service') {
-                if (itemEditing?._id) setServices(prev => prev.map(x => (x._id === local._id ? local : x)));
-                else setServices(prev => [local, ...prev]);
+            if (discountEditing?._id) {
+                setDiscounts(prev => prev.map(d => (d._id === local._id ? local : d)));
             } else {
-                if (itemEditing?._id) setFoods(prev => prev.map(x => (x._id === local._id ? local : x)));
-                else setFoods(prev => [local, ...prev]);
+                setDiscounts(prev => [local, ...prev]);
             }
-            setItemModalOpen(false); setItemEditing(null);
+            setDiscountModalOpen(false);
+            setDiscountEditing(null);
             return;
         }
 
@@ -303,6 +364,16 @@ export function ReservationProvider({ initialReservation, children }) {
     const openAddPayment = () => { setPaymentEditing(null); setPaymentModalOpen(true); };
     const openEditPayment = (p) => { setPaymentEditing(p); setPaymentModalOpen(true); };
 
+    const openAddDiscount = () => {
+        setDiscountEditing(null);
+        setDiscountModalOpen(true);
+    };
+
+    const openEditDiscount = (d) => {
+        setDiscountEditing(d);
+        setDiscountModalOpen(true);
+    };
+
     const savePayment = async (form) => {
         const rec = {
             type: form.type,
@@ -337,6 +408,49 @@ export function ReservationProvider({ initialReservation, children }) {
             setPaymentEditing(null);
         }
     };
+    const saveDiscount = async (form) => {
+        const rec = {
+            name: form.name,
+            amount: Number(form.amount || 0),
+        };
+
+        if (!initialReservation?.id) {
+
+
+            if (discountEditing?.id) {
+                setDiscounts(prev => prev.map(d => (d._id === local._id ? local : d)));
+            } else {
+                setDiscounts(prev => [local, ...prev]);
+            }
+
+            setDiscountModalOpen(false);
+            setDiscountEditing(null);
+            return;
+        }
+
+        setDiscountsLoading(true);
+        try {
+            if (discountEditing?._id) {
+                const { error } = await supabase
+                    .from('discounts')
+                    .update(rec)
+                    .eq('id', discountEditing._id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('discounts')
+                    .insert({ reservation_id: initialReservation.id, ...rec });
+                if (error) throw error;
+            }
+            await reloadDiscounts();
+        } catch (e) {
+            console.error('Save discount failed:', e);
+        } finally {
+            setDiscountsLoading(false);
+            setDiscountModalOpen(false);
+            setDiscountEditing(null);
+        }
+    };
 
     // inside ReservationProvider
 
@@ -368,6 +482,26 @@ export function ReservationProvider({ initialReservation, children }) {
             console.error('Delete payment failed:', e);
         } finally {
             setPaymentsLoading(false);
+        }
+    };
+
+    const deleteDiscount = async (id) => {
+        if (!initialReservation?.id) {
+            setDiscounts(prev => prev.filter(x => x._id !== id));
+            return;
+        }
+        setDiscountsLoading(true);
+        try {
+            const { error } = await supabase
+                .from('discounts')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            setDiscounts(prev => prev.filter(x => x._id !== id));
+        } catch (e) {
+            console.error('Delete discount failed:', e);
+        } finally {
+            setDiscountsLoading(false);
         }
     };
 
@@ -499,20 +633,41 @@ export function ReservationProvider({ initialReservation, children }) {
 
                 y = (doc.lastAutoTable?.finalY ?? y) + 10;
             }
+
+            // Discounts
+            if (discounts.length) {
+                doc.text('Discounts', 14, y);
+                autoTable(doc, {
+                    startY: y + 4,
+                    head: [['Name', 'Amount (LKR)']],
+                    body: discounts.map(d => [
+                        d.name || '—',
+                        Number(d.amount || 0).toFixed(2),
+                    ]),
+                    theme: 'grid',
+                    styles: { fontSize: 9 },
+                    headStyles: { fillColor: [15, 23, 42] },
+                });
+
+                y = (doc.lastAutoTable?.finalY ?? y) + 10;
+            }
+            const subtotal = roomCharges + otherCharges;
+
             const totalsBody = [
                 ['Room Charges', formatLKR(roomCharges)],
                 ['Other Charges', formatLKR(otherCharges)],
+                ['Discounts', `- ${formatLKR(discountTotal)}`],
                 [
-                    { content: 'Total', styles: { fontStyle: 'bold', halign: 'left' } },
+                    { content: 'Total After Discount', styles: { fontStyle: 'bold', halign: 'left' } },
                     { content: formatLKR(total), styles: { fontStyle: 'bold', halign: 'right' } }
                 ],
                 ['Paid', formatLKR(paid)],
             ];
 
-            // ✅ Only add Balance row if balance exists and > 0
             if (balance && balance > 0) {
                 totalsBody.push(['Balance', formatLKR(balance)]);
             }
+
             autoTable(doc, {
                 startY: y,
                 head: [[
@@ -523,8 +678,8 @@ export function ReservationProvider({ initialReservation, children }) {
                 theme: 'plain',
                 styles: { fontSize: 10 },
                 columnStyles: {
-                    0: { halign: 'left' },  // Description column
-                    1: { halign: 'right' }  // Amount column (body)
+                    0: { halign: 'left' },
+                    1: { halign: 'right' }
                 },
             });
 
@@ -628,6 +783,7 @@ export function ReservationProvider({ initialReservation, children }) {
         // state
         services, foods, itemsLoading,
         payments, paymentsLoading,
+        discounts, discountsLoading,
         tab, setTab,
         itemModalOpen, setItemModalOpen,
         itemMode, setItemMode,
@@ -636,14 +792,19 @@ export function ReservationProvider({ initialReservation, children }) {
         paymentModalOpen, setPaymentModalOpen,
         paymentEditing, setPaymentEditing,
         paymentForm, setPaymentForm,
+        discountModalOpen, setDiscountModalOpen,
+        discountEditing, setDiscountEditing,
+        openEditDiscount, openAddDiscount,
+        discountForm, setDiscountForm,
+
 
         // totals
         nights, roomCharges, otherCharges, total, paid, balance,
         checkoutReservation,
         // handlers
         openAddService, openAddFood, openEditService, openEditFood, saveItem, deleteService, deleteFood,
-        openAddPayment, openEditPayment, savePayment, deletePayment,
-        handlePrint,
+        openAddPayment, openEditPayment, savePayment, deletePayment, deleteDiscount,
+        handlePrint, saveDiscount
     };
 
 
