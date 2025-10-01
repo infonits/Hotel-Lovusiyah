@@ -50,6 +50,42 @@ export function ReservationProvider({ initialReservation, children }) {
     const [discountEditing, setDiscountEditing] = useState(null);
     const [discountForm, setDiscountForm] = useState({ name: '', amount: 0 });
 
+    // Reservation edit modal
+    const [dateModalOpen, setDateModalOpen] = useState(false);
+    const [dateForm, setDateForm] = useState({
+        checkInDate: initialReservation?.checkInDate || dayjs().format('YYYY-MM-DD'),
+        checkOutDate: initialReservation?.checkOutDate || dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    });
+
+    // update function
+    const saveReservationDates = async (newDates) => {
+        // 1. Update in DB
+        const { data, error } = await supabase
+            .from("reservations")
+            .update({
+                check_in_date: newDates.checkInDate,
+                check_out_date: newDates.checkOutDate,
+            })
+            .eq("id", reservation.id)
+            .select();
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        // 2. Update local state so UI reflects immediately
+        setReservation((prev) => ({
+            ...prev,
+            checkInDate: newDates.checkInDate,
+            checkOutDate: newDates.checkOutDate,
+        }));
+
+        // 3. Optionally close modal
+        setDateModalOpen(false);
+    };
+
+
     /* ---------- Catalogs ---------- */
     useEffect(() => {
         let alive = true;
@@ -796,10 +832,11 @@ export function ReservationProvider({ initialReservation, children }) {
         discountEditing, setDiscountEditing,
         openEditDiscount, openAddDiscount,
         discountForm, setDiscountForm,
+        dateModalOpen, setDateModalOpen, dateForm, setDateForm, saveReservationDates,
 
 
         // totals
-        nights, roomCharges, otherCharges, total, paid, balance,
+        nights, roomCharges, otherCharges, total, paid, balance, discountTotal,
         checkoutReservation,
         // handlers
         openAddService, openAddFood, openEditService, openEditFood, saveItem, deleteService, deleteFood,

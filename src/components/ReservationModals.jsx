@@ -18,6 +18,7 @@ const icons = {
 export default function ReservationModals() {
     const {
         cancelModalOpen, setCancelModalOpen, confirmCancel, canceling,
+        dateModalOpen, setDateModalOpen, dateForm, setDateForm, saveReservationDates,
 
         serviceCatalog, foodCatalog, catalogLoading,
 
@@ -516,6 +517,60 @@ export default function ReservationModals() {
                     </div>
                 </div>
             )}
+            {dateModalOpen && (
+                <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg border border-slate-200">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-slate-800">
+                                Change Reservation Dates
+                            </h3>
+                            <button
+                                onClick={() => setDateModalOpen(false)}
+                                className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
+                            >
+                                <Icon icon="lucide:x" className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm text-slate-600">Check-in Date</label>
+                                <input
+                                    type="date"
+                                    value={dateForm.checkInDate}
+                                    onChange={(e) => setDateForm(f => ({ ...f, checkInDate: e.target.value }))}
+                                    className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm text-slate-600">Check-out Date</label>
+                                <input
+                                    type="date"
+                                    value={dateForm.checkOutDate}
+                                    onChange={(e) => setDateForm(f => ({ ...f, checkOutDate: e.target.value }))}
+                                    className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-200 bg-white/50"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex items-center justify-end gap-2">
+                            <button
+                                onClick={() => setDateModalOpen(false)}
+                                className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => saveReservationDates(dateForm)}
+                                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </>
     );
 }
