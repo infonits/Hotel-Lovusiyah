@@ -632,8 +632,18 @@ function ExtrasAndReview({
 
 /* ----------------------- Parent ----------------------- */
 export default function CreateReservation() {
-    const today = dayjs().format('YYYY-MM-DD');
-    const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    const now = dayjs();
+    const isBeforeNoon = now.hour() < 12;
+    const initialFrom = isBeforeNoon
+        ? dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+        : dayjs().format('YYYY-MM-DD');
+
+
+    const initialTo = dayjs(initialFrom).add(1, 'day').format('YYYY-MM-DD');
+
+
+
+
     const [searchParams, setSearchParams] = useSearchParams();
     const [offerPrices, setOfferPrices] = useState({});
 
@@ -643,7 +653,7 @@ export default function CreateReservation() {
     const [step, setStep] = useState(1);
 
     // Step 1
-    const [dates, setDates] = useState({ from: today, to: tomorrow });
+    const [dates, setDates] = useState({ from: initialFrom, to: initialTo });
     const [availableRooms, setAvailableRooms] = useState([]);
     const [loadingRooms, setLoadingRooms] = useState(false);
     const [selectedRoomIds, setSelectedRoomIds] = useState([]);
