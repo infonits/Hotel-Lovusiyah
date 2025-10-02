@@ -268,12 +268,18 @@ ${active ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white'}`}
                                             type="number"
                                             placeholder="Enter offer price"
                                             value={offerPrices[r.id] || ""}
-                                            onChange={(e) =>
-                                                setOfferPrices((prev) => ({
-                                                    ...prev,
-                                                    [r.id]: Number(e.target.value) || null,
-                                                }))
-                                            }
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+
+                                                setOfferPrices((prev) => {
+                                                    if (!val) {
+                                                        // remove the key if input is empty
+                                                        const { [r.id]: _, ...rest } = prev;
+                                                        return rest;
+                                                    }
+                                                    return { ...prev, [r.id]: Number(val) };
+                                                });
+                                            }}
                                             onClick={(e) => e.stopPropagation()}
                                             className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                         />
@@ -572,7 +578,8 @@ function ExtrasAndReview({
                                     <li key={r.id} className="flex items-center justify-between">
                                         <span className="text-slate-800">#{r.number} · {r.type}</span>
                                         <span className="text-slate-800">
-                                            {formatLKR(offerPrices[r.id] ?? r.price)} × {totalNights}
+                                            {formatLKR(offerPrices[r.id] != null ? offerPrices[r.id] : r.price)} × {totalNights}
+
                                         </span>
                                     </li>
                                 ))}
