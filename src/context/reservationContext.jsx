@@ -52,6 +52,7 @@ export function ReservationProvider({ initialReservation, children }) {
 
     // Reservation edit modal
     const [dateModalOpen, setDateModalOpen] = useState(false);
+    const [checkinDateModalOpen, setCheckinDateModalOpen] = useState(false);
     const [dateForm, setDateForm] = useState({
         checkInDate: initialReservation?.checkInDate || dayjs().format('YYYY-MM-DD'),
         checkOutDate: initialReservation?.checkOutDate || dayjs().add(1, 'day').format('YYYY-MM-DD'),
@@ -559,10 +560,14 @@ export function ReservationProvider({ initialReservation, children }) {
     };
 
     const deleteDiscount = async (id) => {
+        console.log(id);
+
         if (!initialReservation?.id) {
-            setDiscounts(prev => prev.filter(x => x._id !== id));
+            setDiscounts(prev => prev.filter(x => x.id !== id));
             return;
         }
+        console.log("here");
+
         setDiscountsLoading(true);
         try {
             const { error } = await supabase
@@ -570,7 +575,7 @@ export function ReservationProvider({ initialReservation, children }) {
                 .delete()
                 .eq('id', id);
             if (error) throw error;
-            setDiscounts(prev => prev.filter(x => x._id !== id));
+            setDiscounts(prev => prev.filter(x => x.id !== id));
         } catch (e) {
             console.error('Delete discount failed:', e);
         } finally {
@@ -880,7 +885,7 @@ export function ReservationProvider({ initialReservation, children }) {
         openEditDiscount, openAddDiscount,
         discountForm, setDiscountForm,
         dateModalOpen, setDateModalOpen, dateForm, setDateForm, saveReservationDates,
-        handleCheckInOut,
+        handleCheckInOut, setCheckinDateModalOpen, checkinDateModalOpen,
 
         // totals
         nights, roomCharges, otherCharges, total, paid, balance, discountTotal,
