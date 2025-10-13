@@ -15,7 +15,7 @@ export default function Guests() {
     const [editingId, setEditingId] = useState(null); // uuid when editing, else null
     const [viewGuest, setViewGuest] = useState(null); // for details modal
 
-    const itemsPerPage = 5;
+    const itemsPerPage = 10;
 
     // Create/Edit form
     const [form, setForm] = useState({
