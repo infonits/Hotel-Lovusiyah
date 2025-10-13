@@ -11,7 +11,7 @@ export default function ReservationTabs() {
         // state
         tab, setTab,
         services, foods, payments, discounts, openAddDiscount,
-
+        reservation,
 
         // item handlers (from provider)
         openAddService, openAddFood, openEditService, openEditFood, deleteService, deleteFood,
@@ -60,30 +60,31 @@ export default function ReservationTabs() {
                         </button>
                     ))}
                 </div>
-
-                {tab === 'payments' ? (
-                    <button
-                        onClick={openAddPayment}
-                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
-                    >
-                        <Icon icon="lucide:plus" className="w-4 h-4" /> Add Payment
-                    </button>
-                ) : tab === 'discounts' ? (
-                    <button
-                        onClick={openAddDiscount}
-                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
-                    >
-                        <Icon icon="lucide:plus" className="w-4 h-4" /> Add Discount
-                    </button>
-                ) : (
-                    <button
-                        onClick={() => (tab === 'services' ? openAddService() : openAddFood())}
-                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
-                    >
-                        <Icon icon="lucide:plus" className="w-4 h-4" /> Add {tab === 'services' ? 'Service' : 'Food'}
-                    </button>
-                )}
-
+                {reservation?.status != 'checked_out' &&
+                    <>
+                        {tab === 'payments' ? (
+                            <button
+                                onClick={openAddPayment}
+                                className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
+                            >
+                                <Icon icon="lucide:plus" className="w-4 h-4" /> Add Payment
+                            </button>
+                        ) : tab === 'discounts' ? (
+                            <button
+                                onClick={openAddDiscount}
+                                className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
+                            >
+                                <Icon icon="lucide:plus" className="w-4 h-4" /> Add Discount
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => (tab === 'services' ? openAddService() : openAddFood())}
+                                className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm flex items-center gap-2"
+                            >
+                                <Icon icon="lucide:plus" className="w-4 h-4" /> Add {tab === 'services' ? 'Service' : 'Food'}
+                            </button>
+                        )}
+                    </>}
             </div>
 
 

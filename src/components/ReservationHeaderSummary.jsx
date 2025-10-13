@@ -153,12 +153,15 @@ export default function ReservationHeaderSummary() {
                                         {nights} {nights === 1 ? 'night' : 'nights'}
                                     </span>
                                 </div>
-                                <button
-                                    onClick={() => setDateModalOpen(true)}
-                                    className="mt-2 text-xs text-emerald-600 hover:underline"
-                                >
-                                    Change Dates
-                                </button>
+                                {reservation?.status != 'checked_out' &&
+
+                                    <button
+                                        onClick={() => setDateModalOpen(true)}
+                                        className="mt-2 text-xs text-emerald-600 hover:underline"
+                                    >
+                                        Change Dates
+                                    </button>
+                                }
 
                             </div>
                         </div>
