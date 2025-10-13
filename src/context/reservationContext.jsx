@@ -291,6 +291,43 @@ export function ReservationProvider({ initialReservation, children }) {
         [effectiveRes.rooms, nights]
     );
 
+    const handleCheckInOut = async () => {
+        if (!reservation?.id) return;
+        console.log("here");
+
+
+        try {
+            const now = new Date().toISOString();
+
+            // Determine whether to check in or check out
+            const isAlreadyCheckedIn = reservation?.status === "checked_in";
+
+            const updateData = isAlreadyCheckedIn
+                ? {
+                    status: "checked_out",
+                    check_out_at: now,
+                }
+                : {
+                    status: "checked_in",
+                    check_in_at: now,
+                };
+
+            const { error } = await supabase
+                .from("reservations")
+                .update(updateData)
+                .eq("id", reservation.id);
+
+            if (error) throw error;
+
+            // Update local state
+            setReservation(prev =>
+                prev ? { ...prev, ...updateData } : prev
+            );
+
+        } catch (e) {
+            console.error("Check-in/out failed:", e);
+        }
+    };
 
 
 
@@ -546,8 +583,18 @@ export function ReservationProvider({ initialReservation, children }) {
         const { default: jsPDF } = await import('jspdf');
         const { default: autoTable } = await import('jspdf-autotable');
 
+
         const doc = new jsPDF();
         const res = initialReservation || {};
+        const arrival = res.check_in_at
+            ? `Arrival: ${dayjs(res.check_in_at).format('YY/MM/DD HH:mm')}`
+            : `Arrival: ${dayjs(res.checkInDate).format('YY/MM/DD')}`;
+
+        const departure = res.check_out_at
+            ? `Departure: ${dayjs(res.check_out_at).format('YY/MM/DD HH:mm')}`
+            : `Departure: ${dayjs(res.checkOutDate).format('YY/MM/DD')}`;
+
+
         const n = nights;
         const img = new Image();
         img.src = "/logo.png"; // public/logo.png
@@ -590,8 +637,8 @@ export function ReservationProvider({ initialReservation, children }) {
             [
                 `Guest: ${res.guest?.name || 'N/A'} (${res.guest?.nicNumber || 'N/A'})`,
                 `Phone: ${res.guest?.phone || 'N/A'} | Email: ${res.guest?.email || 'N/A'}`,
-                `Arrival: ${dayjs(res.checkInDate).format('YY/MM/DD')}   `,
-                `Depature: ${dayjs(res.checkOutDate).format('YY/MM/DD')}`,
+                arrival,
+                departure,
                 `Rooms: ${(res.rooms || []).map(r => (r.roomNumber || r.number || '—')).join(', ') || '-'}`,
                 `Nights: ${n}`,
             ].forEach((l, i) => doc.text(l, 14, currentY + 6 + i * 6));
@@ -833,7 +880,7 @@ export function ReservationProvider({ initialReservation, children }) {
         openEditDiscount, openAddDiscount,
         discountForm, setDiscountForm,
         dateModalOpen, setDateModalOpen, dateForm, setDateForm, saveReservationDates,
-
+        handleCheckInOut,
 
         // totals
         nights, roomCharges, otherCharges, total, paid, balance, discountTotal,

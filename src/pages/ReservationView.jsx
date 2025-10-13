@@ -37,6 +37,8 @@ export default function ReservationView() {
     reservation_number,
     status,
     cancelled_at,
+    check_out_at,
+    check_in_at,
     reservation_rooms (
       nightly_rate,
       room: rooms (
@@ -107,6 +109,8 @@ export default function ReservationView() {
                     checkOutDate: data.check_out_date,
                     notes: data.notes || '',
                     status: data.status || 'confirmed',
+                    check_in_at: data.check_in_at,
+                    check_out_at: data.check_out_at,
                 });
             } catch (e) {
                 console.error(e);

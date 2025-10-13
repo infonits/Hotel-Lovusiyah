@@ -4,12 +4,13 @@ import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { useReservation } from '../context/reservationContext';
 import { formatLKR } from '../utils/currency';
+import { formatTime } from '../utils/time';
 
 export default function ReservationHeaderSummary() {
     const {
         reservation, handlePrint, nights,
         roomCharges, otherCharges, total, paid, balance, handleCancel, canceling, discountTotal,
-        setDateModalOpen,
+        setDateModalOpen, handleCheckInOut
 
     } = useReservation();
 
@@ -28,7 +29,7 @@ export default function ReservationHeaderSummary() {
                     <div>
                         <div className="text-sm text-slate-500">Reservation</div>
                         <div className="text-xl font-semibold text-slate-800">
-                            {reservation?.code || 'RES-XXXXXX'}
+                            {reservation?.code || 'RES-XXXXXX'} ({reservation?.status})
                         </div>
                     </div>
                 </div>
@@ -41,19 +42,45 @@ export default function ReservationHeaderSummary() {
                         <Icon icon="lucide:printer" className="w-4 h-4" />
                         Print Bill (PDF)
                     </button>
+
+                    {reservation.status != 'checked_out' && reservation.status == 'checked_in' &&
+                        <button
+                            onClick={handleCheckInOut}
+                            className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center gap-2"
+                        >
+                            <Icon icon="lucide:log-out" className="w-4 h-4" />
+                            Check out
+                        </button>
+                    }
+
+                    {reservation.status !== 'checked_in' && reservation.status !== 'checked_out' &&
+                        <button
+                            onClick={handleCheckInOut}
+                            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-2"
+                        >
+                            <Icon icon="lucide:check-circle-2" className="w-4 h-4" />
+                            Check in
+                        </button>
+                    }
+
                     {isCancelled ? (
                         <span className="px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm">
                             Cancelled
                         </span>
                     ) : (
-                        <button
-                            onClick={handleCancel}
-                            disabled={canceling}
-                            className={`px-4 py-2 rounded-lg text-white shadow-sm ${canceling ? 'bg-slate-400' : 'bg-red-600 hover:bg-red-700'}`}
-                        >
-                            {canceling ? 'Cancelling…' : 'Cancel Reservation'}
-                        </button>
+                        <>
+                            {reservation?.status != 'checked_in' && reservation?.status != 'checked_out' &&
+                                <button
+                                    onClick={handleCancel}
+                                    disabled={canceling}
+                                    className={`px-4 py-2 rounded-lg text-white shadow-sm ${canceling ? 'bg-slate-400' : 'bg-red-600 hover:bg-red-700'}`}
+                                >
+                                    {canceling ? 'Cancelling…' : 'Cancel Reservation'}
+                                </button>
+                            }
+                        </>
                     )}
+
                 </div>
             </div>
 
@@ -82,6 +109,17 @@ export default function ReservationHeaderSummary() {
                                 {reservation?.guest?.email && (
                                     <div className="text-sm text-slate-600 break-words">
                                         <span className="text-slate-400">Email:</span> {reservation.guest.email}
+                                    </div>
+                                )}
+
+                                {reservation?.check_in_at && (
+                                    <div className="text-sm text-slate-600 break-words">
+                                        <span className="text-slate-400">Check In:</span> {formatTime(reservation.check_in_at)}
+                                    </div>
+                                )}
+                                {reservation?.check_out_at && (
+                                    <div className="text-sm text-slate-600 break-words">
+                                        <span className="text-slate-400">Check Out:</span> {formatTime(reservation.check_out_at)}
                                     </div>
                                 )}
                             </div>
