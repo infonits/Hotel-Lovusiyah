@@ -292,13 +292,13 @@ export function ReservationProvider({ initialReservation, children }) {
         [effectiveRes.rooms, nights]
     );
 
-    const handleCheckInOut = async () => {
+    const handleCheckInOut = async (dateTime) => {
         if (!reservation?.id) return;
         console.log("here");
 
 
         try {
-            const now = new Date().toISOString();
+            const now = dateTime || new Date().toISOString();
 
             // Determine whether to check in or check out
             const isAlreadyCheckedIn = reservation?.status === "checked_in";

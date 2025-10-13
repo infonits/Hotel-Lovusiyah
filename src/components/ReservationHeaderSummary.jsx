@@ -10,8 +10,7 @@ export default function ReservationHeaderSummary() {
     const {
         reservation, handlePrint, nights,
         roomCharges, otherCharges, total, paid, balance, handleCancel, canceling, discountTotal,
-        setDateModalOpen, handleCheckInOut
-
+        setDateModalOpen, handleCheckInOut, setCheckinDateModalOpen
     } = useReservation();
 
 
@@ -21,6 +20,9 @@ export default function ReservationHeaderSummary() {
     return (
         <>
             {/* Header */}
+            <button onClick={() => setCheckinDateModalOpen(true)}>
+                Hello
+            </button>
             <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-slate-900 text-white">
@@ -45,7 +47,7 @@ export default function ReservationHeaderSummary() {
 
                     {reservation.status != 'checked_out' && reservation.status == 'checked_in' &&
                         <button
-                            onClick={handleCheckInOut}
+                            onClick={() => setCheckinDateModalOpen(true)}
                             className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center gap-2"
                         >
                             <Icon icon="lucide:log-out" className="w-4 h-4" />
@@ -55,7 +57,7 @@ export default function ReservationHeaderSummary() {
 
                     {reservation.status !== 'checked_in' && reservation.status !== 'checked_out' &&
                         <button
-                            onClick={handleCheckInOut}
+                            onClick={() => setCheckinDateModalOpen(true)}
                             className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-2"
                         >
                             <Icon icon="lucide:check-circle-2" className="w-4 h-4" />
