@@ -266,7 +266,7 @@ export default function ReservationTabs() {
                                                 <button onClick={() => openEditDiscount(d)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
                                                     <Icon icon="lucide:square-pen" className="w-4 h-4" />
                                                 </button>
-                                                <button onClick={() => deleteDiscount(d._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
+                                                <button onClick={() => deleteDiscount(d.id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
                                                     <Icon icon="lucide:trash-2" className="w-4 h-4" />
                                                 </button>
                                             </div>
