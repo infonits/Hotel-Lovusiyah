@@ -45,7 +45,7 @@ export default function ReservationTabs() {
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mt-6">
             <div className="flex items-center justify-between">
                 <div className="flex flex-wrap gap-2">
-                    {['services', 'foods', 'payments', 'discounts'].map((id) => (
+                    {['payments', 'services', 'foods', 'discounts'].map((id) => (
                         <button
                             key={id}
                             onClick={() => setTab(id)}

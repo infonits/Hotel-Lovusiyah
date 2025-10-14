@@ -90,6 +90,24 @@ export default function Expenses() {
         });
     };
 
+    const handleDeleteExpense = async (id) => {
+        if (!confirm('Are you sure you want to delete this expense?')) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('expenses')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error deleting expense:', error);
+            return;
+        }
+
+        setExpenses((prev) => prev.filter((exp) => exp.id !== id));
+    };
+
     /* ---------------- Filters ---------------- */
     const filteredExpenses = useMemo(() => {
         return expenses.filter((e) => {
@@ -260,6 +278,15 @@ export default function Expenses() {
                                             {dayjs(exp.date).format('MMM D, YYYY')}
                                         </td>
                                         <td className="px-6 py-4 text-slate-800">{exp.notes}</td>
+                                        <td className="px-6 py-4 text-slate-800">
+                                            <button
+                                                onClick={() => handleDeleteExpense(exp.id)}
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                title="Open reservation"
+                                            >
+                                                <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
