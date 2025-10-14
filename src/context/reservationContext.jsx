@@ -592,12 +592,12 @@ export function ReservationProvider({ initialReservation, children }) {
         const doc = new jsPDF();
         const res = initialReservation || {};
         const arrival = res.check_in_at
-            ? `Arrival: ${dayjs(res.check_in_at).format('YY/MM/DD HH:mm')}`
-            : `Arrival: ${dayjs(res.checkInDate).format('YY/MM/DD')}`;
+            ? `Check-in: ${dayjs(res.check_in_at).format('YY/MM/DD - hh:mm A')}`
+            : `Check-in: ${dayjs(res.checkInDate).format('YY/MM/DD')}`;
 
         const departure = res.check_out_at
-            ? `Departure: ${dayjs(res.check_out_at).format('YY/MM/DD HH:mm')}`
-            : `Departure: ${dayjs(res.checkOutDate).format('YY/MM/DD')}`;
+            ? `Check-out: ${dayjs(res.check_out_at).format('YY/MM/DD - hh:mm A')}`
+            : `Check-out: ${dayjs(res.checkOutDate).format('YY/MM/DD')}`;
 
 
         const n = nights;
@@ -629,26 +629,44 @@ export function ReservationProvider({ initialReservation, children }) {
             doc.line(14, currentY, pageWidth - 14, currentY); // x1, y1, x2, y2
             // Section spacing
             currentY += 10; // add space below line
-
             // Guest & Stay
             doc.setFont("helvetica", "bold");
-
             doc.setFontSize(12);
-            doc.text('Guest & Stay', 14, currentY);
-            doc.setFont("helvetica", "normal");
+            doc.text('Guest & Booking Details', 14, currentY);
 
+            doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
 
-            [
+            const leftColumnX = 14;    // X position for left column
+            const rightColumnX = 105;  // X position for right column
+            const lineHeight = 6;
+
+            const leftColumn = [
+                `${res?.code}`,
                 `Guest: ${res.guest?.name || 'N/A'} (${res.guest?.nicNumber || 'N/A'})`,
-                `Phone: ${res.guest?.phone || 'N/A'} | Email: ${res.guest?.email || 'N/A'}`,
+                `Phone: ${res.guest?.phone || 'N/A'}`,
+                `Email: ${res.guest?.email || 'N/A'}`,
+            ];
+
+            const rightColumn = [
                 arrival,
                 departure,
-                `Rooms: ${(res.rooms || []).map(r => (r.roomNumber || r.number || '—')).join(', ') || '-'}`,
+                `Rooms: ${(res.rooms || []).map(r => `${r.roomNumber || r.number || '—'} (${r.type || 'N/A'})`).join(', ') || '-'}`,
                 `Nights: ${n}`,
-            ].forEach((l, i) => doc.text(l, 14, currentY + 6 + i * 6));
+            ];
 
-            currentY += 42;
+            // Draw left column
+            leftColumn.forEach((text, i) => {
+                doc.text(text, leftColumnX, currentY + 6 + i * lineHeight);
+            });
+
+            // Draw right column
+            rightColumn.forEach((text, i) => {
+                doc.text(text, rightColumnX, currentY + 6 + i * lineHeight);
+            });
+
+            currentY += Math.max(leftColumn.length, rightColumn.length) * lineHeight + 6;
+
 
             // Rooms
             autoTable(doc, {
