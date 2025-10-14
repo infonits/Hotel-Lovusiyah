@@ -20,9 +20,7 @@ export default function ReservationHeaderSummary() {
     return (
         <>
             {/* Header */}
-            <button onClick={() => setCheckinDateModalOpen(true)}>
-                Hello
-            </button>
+
             <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-slate-900 text-white">

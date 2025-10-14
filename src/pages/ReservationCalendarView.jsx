@@ -239,8 +239,16 @@ export default function ReservationCalendarView() {
     const handleDateDoubleClick = (day) => {
         if (!day) return;
         const start = dayjs().year(year).month(month).date(day);
-        const end = start.add(1, 'day');
-        navigate(`/dashboard/reservations/new?start=${start.format('YYYY-MM-DD')}&end=${end.format('YYYY-MM-DD')}`);
+        const today = dayjs();
+
+        if (clickedDate.isSame(today, 'day')) {
+            navigate(`/dashboard/reservations/new`);
+
+        } else {
+
+            const end = start.add(1, 'day');
+            navigate(`/dashboard/reservations/new?start=${start.format('YYYY-MM-DD')}&end=${end.format('YYYY-MM-DD')}`);
+        }
     };
 
     /* ----------------- stats ----------------- */
