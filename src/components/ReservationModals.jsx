@@ -5,6 +5,9 @@ import { Icon } from '@iconify/react';
 import { useReservation } from '../context/reservationContext';
 import { formatLKR } from '../utils/currency';
 import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
 
 const icons = {
     Cash: "lucide:banknote",
@@ -86,11 +89,16 @@ export default function ReservationModals() {
 
 
 
+
+
+    dayjs.extend(utc);
+    dayjs.extend(timezone);
+
     useEffect(() => {
-        const date = new Date();
-        const formatted = date.toISOString().slice(0, 16);
+        const now = dayjs().tz(dayjs.tz.guess()); // Auto-detect timezone
+        const formatted = now.format("YYYY-MM-DDTHH:mm");
         setCheckinDateTime(formatted);
-    }, [])
+    }, []);
 
     const CardToggle = ({ options, value, onChange }) => (
         <div className="flex gap-2">

@@ -241,7 +241,7 @@ export default function ReservationCalendarView() {
         const start = dayjs().year(year).month(month).date(day);
         const today = dayjs();
 
-        if (clickedDate.isSame(today, 'day')) {
+        if (start.isSame(today, 'day')) {
             navigate(`/dashboard/reservations/new`);
 
         } else {
