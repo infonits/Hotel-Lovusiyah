@@ -292,18 +292,17 @@ export function ReservationProvider({ initialReservation, children }) {
         [effectiveRes.rooms, nights]
     );
 
-    const handleCheckInOut = async (dateTime) => {
+    const handleCheckInOut = async (dateTime, action = null) => {
         if (!reservation?.id) return;
-        console.log("here");
-
 
         try {
             const now = dateTime || new Date().toISOString();
 
-            // Determine whether to check in or check out
+            // Use provided action, otherwise determine automatically
             const isAlreadyCheckedIn = reservation?.status === "checked_in";
+            const checkAction = action || (isAlreadyCheckedIn ? "check_out" : "check_in");
 
-            const updateData = isAlreadyCheckedIn
+            const updateData = checkAction === "check_out"
                 ? {
                     status: "checked_out",
                     check_out_at: now,

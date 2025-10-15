@@ -452,7 +452,7 @@ export default function ReservationModals() {
                                 <button
                                     onClick={async () => {
                                         await savePayment(localPaymentForm);
-                                        await checkoutReservation();   // 👈 call new function
+                                        await handleCheckInOut(null, 'check_out');   // 👈 call new function
                                         setPaymentModalOpen(false);
                                     }}
                                     className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
