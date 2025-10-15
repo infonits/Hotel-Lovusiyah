@@ -100,7 +100,9 @@ export default function ReservationTabs() {
                                 <th className="px-4 py-2 font-medium">Date</th>
                                 <th className="px-4 py-2 font-medium">Rate</th>
                                 <th className="px-4 py-2 font-medium">Amount</th>
-                                <th className="px-4 py-2 font-medium">Actions</th>
+                                {reservation?.status != 'checked_out' &&
+
+                                    <th className="px-4 py-2 font-medium">Actions</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -119,16 +121,20 @@ export default function ReservationTabs() {
                                     <td className="px-4 py-3 text-slate-600">{formatLKR(s.rate)}</td>
 
                                     <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(s.amount)}</td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex gap-2">
-                                            <button onClick={() => openEditService(s)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
-                                                <Icon icon="lucide:square-pen" className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => deleteService(s._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
-                                                <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
+                                    {reservation?.status != 'checked_out' &&
+
+                                        <td className="px-4 py-3">
+
+                                            <div className="flex gap-2">
+                                                <button onClick={() => openEditService(s)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
+                                                    <Icon icon="lucide:square-pen" className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => deleteService(s._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
+                                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    }
                                 </tr>
                             ))}
                         </tbody>
@@ -148,7 +154,9 @@ export default function ReservationTabs() {
 
                                 <th className="px-4 py-2 font-medium">Rate</th>
                                 <th className="px-4 py-2 font-medium">Amount</th>
-                                <th className="px-4 py-2 font-medium">Actions</th>
+                                {reservation?.status != 'checked_out' &&
+
+                                    <th className="px-4 py-2 font-medium">Actions</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -167,14 +175,17 @@ export default function ReservationTabs() {
                                     <td className="px-4 py-3 text-slate-600">{formatLKR(f.rate)}</td>
                                     <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(f.amount)}</td>
                                     <td className="px-4 py-3">
-                                        <div className="flex gap-2">
-                                            <button onClick={() => openEditFood(f)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
-                                                <Icon icon="lucide:square-pen" className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => deleteFood(f._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
-                                                <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        {reservation?.status != 'checked_out' &&
+
+                                            <div className="flex gap-2">
+                                                <button onClick={() => openEditFood(f)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
+                                                    <Icon icon="lucide:square-pen" className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => deleteFood(f._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
+                                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        }
                                     </td>
                                 </tr>
                             ))}
@@ -193,7 +204,7 @@ export default function ReservationTabs() {
                                 <th className="px-4 py-2 font-medium">Method</th>
                                 <th className="px-4 py-2 font-medium">Date</th>
                                 <th className="px-4 py-2 font-medium">Amount</th>
-                                <th className="px-4 py-2 font-medium">Actions</th>
+                                {reservation?.status != 'checked_out' && <th className="px-4 py-2 font-medium">Actions</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -215,16 +226,19 @@ export default function ReservationTabs() {
                                         <td className="px-4 py-3 text-slate-600">{p.method}</td>
                                         <td className="px-4 py-3 text-slate-600">{dayjs(p.date).format('YYYY-MM-DD')}</td>
                                         <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(p.amount)}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex gap-2">
-                                                <button onClick={() => openEditPayment(p)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
-                                                    <Icon icon="lucide:square-pen" className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => deletePayment(p._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
-                                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
+                                        {reservation?.status != 'checked_out' &&
+
+                                            <td className="px-4 py-3">
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => openEditPayment(p)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
+                                                        <Icon icon="lucide:square-pen" className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => deletePayment(p._id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
+                                                        <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        }
                                     </tr>
                                 ))
                             )}
@@ -241,7 +255,7 @@ export default function ReservationTabs() {
                                 <th className="px-4 py-2 font-medium">Name</th>
                                 <th className="px-4 py-2 font-medium">Date</th>
                                 <th className="px-4 py-2 font-medium">Value</th>
-                                <th className="px-4 py-2 font-medium">Actions</th>
+                                {reservation?.status != 'checked_out' && <th className="px-4 py-2 font-medium">Actions</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -263,14 +277,17 @@ export default function ReservationTabs() {
                                         <td className="px-4 py-3 text-slate-600">{dayjs(d.date).format('YYYY-MM-DD')}</td>
                                         <td className="px-4 py-3 text-slate-800 font-medium">{formatLKR(d.amount)}</td>
                                         <td className="px-4 py-3">
-                                            <div className="flex gap-2">
-                                                <button onClick={() => openEditDiscount(d)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
-                                                    <Icon icon="lucide:square-pen" className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => deleteDiscount(d.id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
-                                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                                            {reservation?.status != 'checked_out' &&
+
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => openEditDiscount(d)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200" title="Edit">
+                                                        <Icon icon="lucide:square-pen" className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => deleteDiscount(d.id)} className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100" title="Delete">
+                                                        <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            }
                                         </td>
                                     </tr>
                                 ))
