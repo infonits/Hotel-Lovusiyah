@@ -9,21 +9,19 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabse';
 import { formatLKR } from '../utils/currency';
 
-/* ---------------- Helpers ---------------- */
-function inDateRange(dateISO, fromISO, toISO) {
-  const d = dayjs(dateISO);
-  return (
-    d.isAfter(dayjs(fromISO).subtract(1, 'day')) &&
-    d.isBefore(dayjs(toISO).add(1, 'day'))
-  );
-}
-
-
 /* ---------------- Component ---------------- */
 export default function Reports() {
   const [expenses, setExpenses] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expensesPage, setExpensesPage] = useState(1);
+
+  // Counts for pagination
+  const [paymentsCount, setPaymentsCount] = useState(0);
+  const [expensesCount, setExpensesCount] = useState(0);
+
+  const itemsPerPage = 10;
 
   const thisMonth = dayjs();
   const [range, setRange] = useState({
@@ -31,82 +29,94 @@ export default function Reports() {
     to: thisMonth.endOf('month').format('YYYY-MM-DD'),
   });
 
-  /* ---------------- Fetch from Supabase ---------------- */
+  // Calculate total pages
+  const paymentsTotalPages = Math.ceil(paymentsCount / itemsPerPage) || 1;
+  const expensesTotalPages = Math.ceil(expensesCount / itemsPerPage) || 1;
+
+  /* ---------------- Fetch from Supabase with Pagination ---------------- */
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
-      const { data: expData, error: expErr } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false });
+      // Fetch payments with pagination
+      const paymentsStart = (currentPage - 1) * itemsPerPage;
+      const paymentsEnd = paymentsStart + itemsPerPage - 1;
 
-      const { data: payData, error: payErr } = await supabase
+      const { data: payData, error: payErr, count: payCount } = await supabase
         .from('payments')
-        .select('*')
-        .order('date', { ascending: false });
+        .select('*', { count: 'exact' })
+        .gte('date', range.from)
+        .lte('date', range.to)
+        .order('date', { ascending: false })
+        .range(paymentsStart, paymentsEnd);
+
+      // Fetch expenses with pagination
+      const expensesStart = (expensesPage - 1) * itemsPerPage;
+      const expensesEnd = expensesStart + itemsPerPage - 1;
+
+      const { data: expData, error: expErr, count: expCount } = await supabase
+        .from('expenses')
+        .select('*', { count: 'exact' })
+        .gte('date', range.from)
+        .lte('date', range.to)
+        .order('date', { ascending: false })
+        .range(expensesStart, expensesEnd);
 
       if (expErr) console.error('Expenses fetch error:', expErr);
       if (payErr) console.error('Payments fetch error:', payErr);
 
       setExpenses(expData || []);
       setPayments(payData || []);
+      setPaymentsCount(payCount || 0);
+      setExpensesCount(expCount || 0);
       setLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [range.from, range.to, currentPage, expensesPage]);
 
-  /* ---------------- Filters ---------------- */
-  const filteredExpenses = useMemo(
-    () => expenses.filter((e) => inDateRange(e.date, range.from, range.to)),
-    [expenses, range]
-  );
-  const filteredPayments = useMemo(
-    () => payments.filter((p) => inDateRange(p.date, range.from, range.to)),
-    [payments, range]
-  );
+  /* ---------------- Fetch Totals (for summary cards) ---------------- */
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [totalPayments, setTotalPayments] = useState(0);
 
-  /* ---------------- Totals ---------------- */
-  const totalExpenses = useMemo(
-    () => filteredExpenses.reduce((s, e) => s + Number(e.amount), 0),
-    [filteredExpenses]
-  );
-  const totalPayments = useMemo(
-    () => filteredPayments.reduce((s, p) => s + Number(p.amount), 0),
-    [filteredPayments]
-  );
+  useEffect(() => {
+    const fetchTotals = async () => {
+      // Get all payments in date range for totals
+      const { data: allPayments } = await supabase
+        .from('payments')
+        .select('amount')
+        .gte('date', range.from)
+        .lte('date', range.to);
+
+      // Get all expenses in date range for totals
+      const { data: allExpenses } = await supabase
+        .from('expenses')
+        .select('amount')
+        .gte('date', range.from)
+        .lte('date', range.to);
+
+      const payTotal = (allPayments || []).reduce((s, p) => s + Number(p.amount), 0);
+      const expTotal = (allExpenses || []).reduce((s, e) => s + Number(e.amount), 0);
+
+      setTotalPayments(payTotal);
+      setTotalExpenses(expTotal);
+    };
+
+    fetchTotals();
+  }, [range.from, range.to]);
+
   const net = useMemo(
     () => totalPayments - totalExpenses,
     [totalPayments, totalExpenses]
   );
 
-  /* ---------------- Combined Ledger ---------------- */
-  const ledger = useMemo(() => {
-    const exp = filteredExpenses.map((e) => ({
-      id: e.id,
-      type: 'Expense',
-      title: e.title,
-      categoryOrMethod: e.category,
-      amount: -Math.abs(Number(e.amount)),
-      date: e.date,
-      notes: e.notes || '',
-    }));
-    const pay = filteredPayments.map((p) => ({
-      id: p.id,
-      type: 'Payment',
-      title: p.type,
-      categoryOrMethod: p.method,
-      amount: Math.abs(Number(p.amount)),
-      date: p.date,
-      notes: p.notes || '',
-    }));
-    return [...exp, ...pay].sort(
-      (a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
-    );
-  }, [filteredExpenses, filteredPayments]);
+  /* ---------------- Reset pages when date changes ---------------- */
+  useEffect(() => {
+    setCurrentPage(1);
+    setExpensesPage(1);
+  }, [range.from, range.to]);
 
-  /* ---------------- CSV + PDF Export ---------------- */
+  /* ---------------- CSV + PDF Export (fetch all data) ---------------- */
   const downloadCSV = (rows, filename) => {
     const csv = Papa.unparse(rows);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -118,8 +128,15 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
-  const exportExpensesCSV = () => {
-    const rows = filteredExpenses.map((e) => ({
+  const exportExpensesCSV = async () => {
+    const { data } = await supabase
+      .from('expenses')
+      .select('*')
+      .gte('date', range.from)
+      .lte('date', range.to)
+      .order('date', { ascending: false });
+
+    const rows = (data || []).map((e) => ({
       ID: e.id,
       Title: e.title,
       Category: e.category,
@@ -130,8 +147,15 @@ export default function Reports() {
     downloadCSV(rows, `expenses_${range.from}_to_${range.to}.csv`);
   };
 
-  const exportPaymentsCSV = () => {
-    const rows = filteredPayments.map((p) => ({
+  const exportPaymentsCSV = async () => {
+    const { data } = await supabase
+      .from('payments')
+      .select('*')
+      .gte('date', range.from)
+      .lte('date', range.to)
+      .order('date', { ascending: false });
+
+    const rows = (data || []).map((p) => ({
       ID: p.id,
       Reservation: p.reservation_id,
       Type: p.type,
@@ -142,20 +166,61 @@ export default function Reports() {
     downloadCSV(rows, `payments_${range.from}_to_${range.to}.csv`);
   };
 
-  const exportLedgerCSV = () => {
-    const rows = ledger.map((r) => ({
-      ID: r.id,
-      Type: r.type,
-      Title: r.title,
-      CategoryOrMethod: r.categoryOrMethod,
-      Amount: r.amount,
-      Date: r.date,
-      Notes: r.notes,
+  const exportLedgerCSV = async () => {
+    const { data: expData } = await supabase
+      .from('expenses')
+      .select('*')
+      .gte('date', range.from)
+      .lte('date', range.to);
+
+    const { data: payData } = await supabase
+      .from('payments')
+      .select('*')
+      .gte('date', range.from)
+      .lte('date', range.to);
+
+    const exp = (expData || []).map((e) => ({
+      ID: e.id,
+      Type: 'Expense',
+      Title: e.title,
+      CategoryOrMethod: e.category,
+      Amount: -Math.abs(Number(e.amount)),
+      Date: e.date,
+      Notes: e.notes || '',
     }));
-    downloadCSV(rows, `ledger_${range.from}_to_${range.to}.csv`);
+
+    const pay = (payData || []).map((p) => ({
+      ID: p.id,
+      Type: 'Payment',
+      Title: p.type,
+      CategoryOrMethod: p.method,
+      Amount: Math.abs(Number(p.amount)),
+      Date: p.date,
+      Notes: p.notes || '',
+    }));
+
+    const ledger = [...exp, ...pay].sort(
+      (a, b) => dayjs(a.Date).valueOf() - dayjs(b.Date).valueOf()
+    );
+
+    downloadCSV(ledger, `ledger_${range.from}_to_${range.to}.csv`);
   };
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
+    const { data: payData } = await supabase
+      .from('payments')
+      .select('*')
+      .gte('date', range.from)
+      .lte('date', range.to)
+      .order('date', { ascending: false });
+
+    const { data: expData } = await supabase
+      .from('expenses')
+      .select('*')
+      .gte('date', range.from)
+      .lte('date', range.to)
+      .order('date', { ascending: false });
+
     const doc = new jsPDF();
 
     doc.setFontSize(16);
@@ -166,7 +231,7 @@ export default function Reports() {
     autoTable(doc, {
       startY: 28,
       head: [['ID', 'Reservation', 'Type', 'Method', 'Amount', 'Date']],
-      body: filteredPayments.map((p) => [
+      body: (payData || []).map((p) => [
         p.id,
         p.reservation_id,
         p.type,
@@ -181,7 +246,7 @@ export default function Reports() {
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 10,
       head: [['ID', 'Title', 'Category', 'Amount', 'Date', 'Notes']],
-      body: filteredExpenses.map((e) => [
+      body: (expData || []).map((e) => [
         e.id,
         e.title,
         e.category,
@@ -210,7 +275,6 @@ export default function Reports() {
         <div className="text-center text-slate-500">Loading reports...</div>
       ) : (
         <>
-
           {/* Filters + Export */}
           <div className="bg-yellow-50 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
@@ -284,13 +348,13 @@ export default function Reports() {
             </div>
           </div>
 
-
-
-          {/* ✅ KPI glance cards */}
+          {/* KPI glance cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="p-4 rounded-xl border border-white/20 bg-white/70 backdrop-blur-sm shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="bg-emerald-100 text-emerald-700 p-2 rounded-full"><Icon icon="lucide:credit-card" className="w-5 h-5" /></div>
+                <div className="bg-emerald-100 text-emerald-700 p-2 rounded-full">
+                  <Icon icon="lucide:credit-card" className="w-5 h-5" />
+                </div>
                 <div>
                   <div className="text-sm text-slate-500">Total Payments</div>
                   <div className="text-xl font-semibold text-slate-800">{formatLKR(totalPayments)}</div>
@@ -299,7 +363,9 @@ export default function Reports() {
             </div>
             <div className="p-4 rounded-xl border border-white/20 bg-white/70 backdrop-blur-sm shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="bg-rose-100 text-rose-700 p-2 rounded-full"><Icon icon="lucide:receipt" className="w-5 h-5" /></div>
+                <div className="bg-rose-100 text-rose-700 p-2 rounded-full">
+                  <Icon icon="lucide:receipt" className="w-5 h-5" />
+                </div>
                 <div>
                   <div className="text-sm text-slate-500">Total Expenses</div>
                   <div className="text-xl font-semibold text-slate-800">{formatLKR(totalExpenses)}</div>
@@ -308,10 +374,12 @@ export default function Reports() {
             </div>
             <div className="p-4 rounded-xl border border-white/20 bg-white/70 backdrop-blur-sm shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="bg-slate-100 text-slate-700 p-2 rounded-full"><Icon icon="lucide:scale" className="w-5 h-5" /></div>
+                <div className="bg-slate-100 text-slate-700 p-2 rounded-full">
+                  <Icon icon="lucide:scale" className="w-5 h-5" />
+                </div>
                 <div>
-                  <div className="text-sm text-slate-500">Entries</div>
-                  <div className="text-xl font-semibold text-slate-800">{filteredPayments.length + filteredExpenses.length}</div>
+                  <div className="text-sm text-slate-500">Total Entries</div>
+                  <div className="text-xl font-semibold text-slate-800">{paymentsCount + expensesCount}</div>
                 </div>
               </div>
             </div>
@@ -329,7 +397,6 @@ export default function Reports() {
               <table className="w-full">
                 <thead className="bg-slate-50/50">
                   <tr>
-                    {/* <th className="px-6 py-4 text-left">Reservation</th> */}
                     <th className="px-6 py-4 text-left">Type</th>
                     <th className="px-6 py-4 text-left">Method</th>
                     <th className="px-6 py-4 text-left">Amount</th>
@@ -338,21 +405,49 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPayments.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors"
-                    >
-                      {/* <td className="px-6 py-4">{p.reservation_id}</td> */}
-                      <td className="px-6 py-4">{p.type}</td>
-                      <td className="px-6 py-4">{p.method}</td>
-                      <td className="px-6 py-4">{formatLKR(p.amount)}</td>
-                      <td className="px-6 py-4">{dayjs(p.date).format('MMM D, YYYY')}</td>
-                      <td className="px-6 py-4">{p.notes || '-'}</td>
+                  {payments.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
+                        No payments found for this date range
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    payments.map((p) => (
+                      <tr
+                        key={p.id}
+                        className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors"
+                      >
+                        <td className="px-6 py-4">{p.type}</td>
+                        <td className="px-6 py-4">{p.method}</td>
+                        <td className="px-6 py-4">{formatLKR(p.amount)}</td>
+                        <td className="px-6 py-4">{dayjs(p.date).format('MMM D, YYYY')}</td>
+                        <td className="px-6 py-4">{p.notes || '-'}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
+            </div>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200/50">
+              <div className="text-sm text-slate-600">
+                Page {currentPage} of {paymentsTotalPages}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <button
+                  disabled={currentPage === paymentsTotalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(paymentsTotalPages, p + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
 
@@ -376,23 +471,51 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredExpenses.map((e) => (
-                    <tr
-                      key={e.id}
-                      className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors"
-                    >
-                      <td className="px-6 py-4">{e.title}</td>
-                      <td className="px-6 py-4">{e.category}</td>
-                      <td className="px-6 py-4">{formatLKR(e.amount)}</td>
-                      <td className="px-6 py-4">{dayjs(e.date).format('MMM D, YYYY')}</td>
-                      <td className="px-6 py-4">{e.notes || '-'}</td>
+                  {expenses.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
+                        No expenses found for this date range
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    expenses.map((e) => (
+                      <tr
+                        key={e.id}
+                        className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors"
+                      >
+                        <td className="px-6 py-4">{e.title}</td>
+                        <td className="px-6 py-4">{e.category}</td>
+                        <td className="px-6 py-4">{formatLKR(e.amount)}</td>
+                        <td className="px-6 py-4">{dayjs(e.date).format('MMM D, YYYY')}</td>
+                        <td className="px-6 py-4">{e.notes || '-'}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200/50">
+              <div className="text-sm text-slate-600">
+                Page {expensesPage} of {expensesTotalPages}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  disabled={expensesPage === 1}
+                  onClick={() => setExpensesPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <button
+                  disabled={expensesPage === expensesTotalPages}
+                  onClick={() => setExpensesPage((p) => Math.min(expensesTotalPages, p + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
-
         </>
       )}
     </div>
