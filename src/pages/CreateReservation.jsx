@@ -690,8 +690,11 @@ export default function CreateReservation() {
     };
 
     const roomTotal = useMemo(
-        () => selectedRooms.reduce((sum, r) => sum + getRate(r) * totalNights, 0),
-        [selectedRooms, totalNights]
+        () => selectedRooms.reduce((sum, r) => {
+            const rate = offerPrices[r.id] != null ? offerPrices[r.id] : r.price;
+            return sum + (Number(rate) * totalNights);
+        }, 0),
+        [selectedRooms, totalNights, offerPrices]
     );
 
 
