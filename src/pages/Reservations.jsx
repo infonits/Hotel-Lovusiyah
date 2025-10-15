@@ -120,6 +120,9 @@ export default function ReservationsPage() {
         const confirmed = filtered.filter(
             (r) => String(r.status || '').toLowerCase() === 'confirmed'
         ).length;
+        const chekedIn = filtered.filter(
+            (r) => String(r.status || '').toLowerCase() === 'checked_in'
+        ).length;
         const guests = filtered.reduce(
             (sum, r) => sum + (r.reservation_guests?.length || 0),
             0
@@ -128,7 +131,7 @@ export default function ReservationsPage() {
             (sum, r) => sum + (Number(r.estimated_total) || 0),
             0
         );
-        return { total, confirmed, guests, revenue };
+        return { total, confirmed, guests, revenue, chekedIn };
     }, [filtered]);
 
 
@@ -247,14 +250,15 @@ export default function ReservationsPage() {
                     icon="lucide:badge-check"
                     label="Confirmed"
                     value={summary.confirmed}
-                    color="bg-blue-100 text-blue-700"
+                    color="bg-green-100 text-green-700"
                 />
                 <SummaryCard
-                    icon="lucide:users"
-                    label="Guests"
-                    value={summary.guests}
-                    color="bg-indigo-100 text-indigo-700"
+                    icon="lucide:badge-check"
+                    label="Checked In"
+                    value={summary.chekedIn}
+                    color="bg-blue-100 text-blue-700"
                 />
+
                 <SummaryCard
                     icon="lucide:wallet"
                     label="Revenue"
@@ -265,7 +269,7 @@ export default function ReservationsPage() {
 
             {/* Table */}
             <div className="bg-white/70 rounded-2xl border border-white/20 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+                <div>
                     <table className="w-full">
                         <thead className="bg-slate-50/50">
                             <tr>
@@ -273,7 +277,6 @@ export default function ReservationsPage() {
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Guest(s)</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check-In</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check-Out</th>
-                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Room(s)</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Status</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Amount</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Actions</th>
@@ -300,30 +303,19 @@ export default function ReservationsPage() {
                                     >
                                         <td className="px-6 py-4 font-medium text-slate-800">
                                             {r.reservation_number
-                                                ? `RES-${r.reservation_number.toString().padStart(6, '0')}`
-                                                : 'RES-000000'}
+                                                ? `RES-${r.reservation_number.toString().padStart(4, '0')}`
+                                                : 'RES-0000'}
                                         </td>
                                         <td className="px-6 py-4 font-medium text-slate-800">
                                             {r.reservation_guests?.map((g) => g.guest?.name).join(', ') || '-'}
                                         </td>
                                         <td className="px-6 py-4 text-slate-800">
-                                            {dayjs(r.check_in_date).format('MMM D, YYYY')}
+                                            {dayjs(r.check_in_date).format('DD/MM/YY')}
                                         </td>
                                         <td className="px-6 py-4 text-slate-800">
-                                            {dayjs(r.check_out_date).format('MMM D, YYYY')}
+                                            {dayjs(r.check_out_date).format('DD/MM/YY')}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                {/* Room Count Badge */}
-                                                <div className="flex items-center gap-2">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                                                        {r.reservation_rooms?.length || 0} {r.reservation_rooms?.length === 1 ? 'Room' : 'Rooms'}
-                                                    </span>
-                                                </div>
 
-
-                                            </div>
-                                        </td>
 
                                         <td className="px-6 py-4">
                                             <span

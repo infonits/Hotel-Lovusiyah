@@ -101,8 +101,8 @@ export default function ReservationView() {
                 setInitialReservation({
                     id: data.id,
                     code: data.reservation_number
-                        ? `RES-${data.reservation_number.toString().padStart(6, '0')}`
-                        : 'RES-000000',
+                        ? `RES-${data.reservation_number.toString().padStart(4, '0')}`
+                        : 'RES-0000',
                     guest,
                     rooms,
                     checkInDate: data.check_in_date,
