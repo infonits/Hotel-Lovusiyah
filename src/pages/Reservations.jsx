@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import { supabase } from '../lib/supabse';
 import { formatLKR } from '../utils/currency';
 
-const statusOptions = ['All', 'Confirmed', 'Pending', 'Cancelled'];
+const statusOptions = ['All', 'Confirmed', 'Checked_in', 'Pending', 'Cancelled'];
 
 export default function ReservationsPage() {
     const navigate = useNavigate();
@@ -36,6 +36,7 @@ export default function ReservationsPage() {
                 .select(`
                     id,
                     status,
+                    reservation_number,
                     estimated_total,
                     check_in_date,
                     check_out_date,
@@ -259,7 +260,9 @@ export default function ReservationsPage() {
                                         className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors"
                                     >
                                         <td className="px-6 py-4 font-medium text-slate-800">
-                                            {r?.code || '-'}
+                                            {r.reservation_number
+                                                ? `RES-${r.reservation_number.toString().padStart(6, '0')}`
+                                                : 'RES-000000'}
                                         </td>
                                         <td className="px-6 py-4 font-medium text-slate-800">
                                             {r.reservation_guests?.map((g) => g.guest?.name).join(', ') || '-'}
@@ -286,14 +289,17 @@ export default function ReservationsPage() {
                                         <td className="px-6 py-4">
                                             <span
                                                 className={`px-2 py-1 rounded text-xs font-medium
-                                                    ${String(r.status).toLowerCase() === 'confirmed'
+    ${String(r.status).toLowerCase() === 'confirmed'
                                                         ? 'bg-emerald-100 text-emerald-700'
                                                         : String(r.status).toLowerCase() === 'pending'
                                                             ? 'bg-amber-100 text-amber-700'
-                                                            : 'bg-red-100 text-red-700'}`}
+                                                            : String(r.status).toLowerCase() === 'checked_in'
+                                                                ? 'bg-blue-100 text-blue-700'
+                                                                : 'bg-red-100 text-red-700'}`}
                                             >
                                                 {r.status}
                                             </span>
+
                                         </td>
                                         <td className="px-6 py-4 text-slate-800">
                                             {String(r.status).toLowerCase() === 'cancelled'

@@ -198,7 +198,7 @@ export default function ReservationCalendarView() {
         const bucket = monthMap.get(key);
         let reserved = 0;
         if (bucket) {
-            reserved = new Set(bucket.items.filter(x => x.status === 'confirmed').map(x => x.room)).size;
+            reserved = new Set(bucket.items.filter(x => x.status === 'confirmed' || x.status === 'checked_in').map(x => x.room)).size;
         }
         const available = Math.max(0, totalRooms - reserved);
         const rate = totalRooms > 0 ? (reserved / totalRooms) * 100 : 0;
@@ -232,7 +232,7 @@ export default function ReservationCalendarView() {
 
         return reservations.sort((a, b) => {
             if (a.status === b.status) return 0;
-            return a.status === 'confirmed' ? -1 : 1;
+            return (a.status === 'confirmed' || a.status === 'checked_in') ? -1 : 1;
         });
     };
 
@@ -464,15 +464,18 @@ export default function ReservationCalendarView() {
                                                         <span className="font-medium text-slate-800">Rooms {reservation.rooms}</span>
                                                         <span
                                                             className={`px-2 py-1 rounded text-xs font-medium
-      ${reservation.status === 'confirmed'
+    ${reservation.status === 'confirmed'
                                                                     ? 'bg-emerald-100 text-emerald-700'
-                                                                    : reservation.status === 'checked_out'
-                                                                        ? 'bg-blue-600 text-white'
-                                                                        : 'bg-amber-100 text-amber-700'
+                                                                    : reservation.status === 'checked_in'
+                                                                        ? 'bg-blue-100 text-blue-700'
+                                                                        : reservation.status === 'checked_out'
+                                                                            ? 'bg-red-100 text-red-700'
+                                                                            : 'bg-amber-100 text-amber-700'
                                                                 }`}
                                                         >
                                                             {reservation.status}
                                                         </span>
+
                                                     </div>
                                                     <div className="text-sm text-slate-600">
                                                         <div>{reservation.guest}</div>
