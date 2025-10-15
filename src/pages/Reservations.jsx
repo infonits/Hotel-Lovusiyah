@@ -22,6 +22,11 @@ export default function ReservationsPage() {
         from: thisMonth.startOf('month').format('YYYY-MM-DD'),
         to: thisMonth.endOf('month').format('YYYY-MM-DD'),
     });
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        reservationId: null,
+        reservationNumber: null
+    });
 
     // pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -125,6 +130,40 @@ export default function ReservationsPage() {
         );
         return { total, confirmed, guests, revenue };
     }, [filtered]);
+
+
+    const handleDeleteClick = (reservationId, reservationNumber) => {
+        setDeleteModal({
+            isOpen: true,
+            reservationId,
+            reservationNumber
+        });
+    };
+
+    const handleConfirmDelete = async (reservationId) => {
+        try {
+            // Close modal first
+            setDeleteModal({ isOpen: false, reservationId: null, reservationNumber: null });
+
+            // Your delete logic here
+            const { error } = await supabase
+                .from('reservations')
+                .delete()
+                .eq('id', reservationId);
+
+            if (error) throw error;
+
+            // Update UI
+            setReservations(prev => prev.filter(r => r.id !== reservationId));
+
+            // Optional: Show success toast instead of alert
+            console.log('Reservation deleted successfully!');
+
+        } catch (error) {
+            console.error('Error deleting reservation:', error);
+            alert('Failed to delete reservation. Please try again.');
+        }
+    };
 
     /* ---------------- Render ---------------- */
     return (
@@ -341,7 +380,14 @@ export default function ReservationsPage() {
                                                         </div>
                                                     )}
                                                 </div>
-
+                                                {/* Delete Button */}
+                                                <button
+                                                    onClick={() => handleDeleteClick(r.id, r.reservation_number)}
+                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                                    title="Delete reservation"
+                                                >
+                                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                                                </button>
                                                 {/* Open Reservation Button */}
                                                 <button
                                                     onClick={() => navigate(`/dashboard/reservations/${r.id}`)}
@@ -397,6 +443,40 @@ export default function ReservationsPage() {
                     </div>
                 </div>
             </div>
+            {/* Delete Confirmation Modal */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-6 max-w-md mx-4">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 rounded-full bg-red-100 text-red-600">
+                                <Icon icon="lucide:alert-triangle" className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-slate-800">Delete Reservation</h3>
+                        </div>
+
+                        <p className="text-slate-600 mb-6">
+                            Are you sure you want to delete reservation{' '}
+                            <span className="font-semibold">RES-{deleteModal.reservationNumber?.toString().padStart(6, '0')}</span>?
+                            This action cannot be undone.
+                        </p>
+
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setDeleteModal({ isOpen: false, reservationId: null, reservationNumber: null })}
+                                className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleConfirmDelete(deleteModal.reservationId)}
+                                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                Delete Reservation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
