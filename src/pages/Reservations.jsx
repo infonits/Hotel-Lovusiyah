@@ -229,6 +229,7 @@ export default function ReservationsPage() {
                     <table className="w-full">
                         <thead className="bg-slate-50/50">
                             <tr>
+                                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">RES-ID</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Guest(s)</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check-In</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-slate-700">Check-Out</th>
@@ -257,6 +258,9 @@ export default function ReservationsPage() {
                                         key={r.id}
                                         className="border-t border-slate-200/50 hover:bg-slate-50/30 transition-colors"
                                     >
+                                        <td className="px-6 py-4 font-medium text-slate-800">
+                                            {r?.code || '-'}
+                                        </td>
                                         <td className="px-6 py-4 font-medium text-slate-800">
                                             {r.reservation_guests?.map((g) => g.guest?.name).join(', ') || '-'}
                                         </td>

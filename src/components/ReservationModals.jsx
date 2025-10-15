@@ -100,6 +100,22 @@ export default function ReservationModals() {
         setCheckinDateTime(formatted);
     }, []);
 
+
+    const handleSubmit = () => {
+        // Convert to UTC
+        const utcTime = dayjs(checkinDateTime)
+            .tz(dayjs.tz.guess()) // interpret as local
+            .utc() // convert to UTC
+            .format(); // full ISO string (e.g., "2025-10-15T05:30:00Z")
+
+        // Send UTC time to backend handler
+        handleCheckInOut(utcTime);
+
+        // Close modal (optional)
+        setCheckinDateModalOpen(false);
+    };
+
+
     const CardToggle = ({ options, value, onChange }) => (
         <div className="flex gap-2">
             {options.map((opt) => {
@@ -618,10 +634,7 @@ export default function ReservationModals() {
                                 Cancel
                             </button>
                             <button
-                                onClick={() => {
-                                    handleCheckInOut(checkinDateTime);
-                                    setCheckinDateModalOpen(false);
-                                }}
+                                onClick={() => handleSubmit()}
                                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
                             >
                                 Save

@@ -28,7 +28,7 @@ export function ReservationProvider({ initialReservation, children }) {
     const [paymentsLoading, setPaymentsLoading] = useState(true);
     const [discountsLoading, setDiscountsLoading] = useState(true)
     // Tabs
-    const [tab, setTab] = useState('services');
+    const [tab, setTab] = useState('payments');
 
     // Item modal
     const [itemModalOpen, setItemModalOpen] = useState(false);
