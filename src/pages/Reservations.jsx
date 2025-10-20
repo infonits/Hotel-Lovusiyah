@@ -88,7 +88,7 @@ export default function ReservationsPage() {
                     : String(r.status || '').toLowerCase() === statusFilter.toLowerCase();
 
             const searchOk =
-                !q ||
+                !q || `res-${r.reservation_number?.toString().padStart(4, '0')}`.includes(q.toLowerCase()) ||
                 r.reservation_guests?.some((g) =>
                     g.guest?.name?.toLowerCase().includes(q)
                 ) ||
