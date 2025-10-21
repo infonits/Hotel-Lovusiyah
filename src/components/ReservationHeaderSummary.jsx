@@ -5,17 +5,26 @@ import dayjs from 'dayjs';
 import { useReservation } from '../context/reservationContext';
 import { formatLKR } from '../utils/currency';
 import { formatTime } from '../utils/time';
+import { toast } from 'react-toastify';
 
 export default function ReservationHeaderSummary() {
     const {
         reservation, handlePrint, nights,
         roomCharges, otherCharges, total, paid, balance, handleCancel, canceling, discountTotal,
-        setDateModalOpen, handleCheckInOut, setCheckinDateModalOpen
+        setDateModalOpen, handleCheckInOut, setCheckinDateModalOpen, openAddPayment
     } = useReservation();
 
 
     const isCancelled = reservation?.status === 'cancelled';
 
+    const handleCheckout = () => {
+        if (balance > 0) {
+            toast.info('Please pay the remaining balance to checkout 😊');
+            openAddPayment();
+        } else {
+            setCheckinDateModalOpen(true);
+        }
+    };
 
     return (
         <>
@@ -45,7 +54,7 @@ export default function ReservationHeaderSummary() {
 
                     {reservation.status != 'checked_out' && reservation.status == 'checked_in' &&
                         <button
-                            onClick={() => setCheckinDateModalOpen(true)}
+                            onClick={handleCheckout}
                             className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center gap-2"
                         >
                             <Icon icon="lucide:log-out" className="w-4 h-4" />

@@ -42,7 +42,7 @@ export default function ReservationTabs() {
 
 
     return (
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mt-6">
+        <div className=" backdrop-blur-sm rounded-2xl p-6  shadow-sm mt-6 border-2 border-slate-300 bg-slate-50">
             <div className="flex items-center justify-between">
                 <div className="flex flex-wrap gap-2">
                     {['payments', 'services', 'foods', 'discounts'].map((id) => (
