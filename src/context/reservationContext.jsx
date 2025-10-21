@@ -9,7 +9,7 @@ const ReservationContext = createContext(null);
 export const useReservation = () => useContext(ReservationContext);
 
 
-export function ReservationProvider({ initialReservation, children }) {
+export function ReservationProvider({ initialReservation, refetchReservation, children }) {
     // Catalogs (services + menus from Supabase)
     const [serviceCatalog, setServiceCatalog] = useState([]); // [{id,title,rate}]
     const [foodCatalog, setFoodCatalog] = useState([]);       // [{id,title,rate,category}]
@@ -324,6 +324,8 @@ export function ReservationProvider({ initialReservation, children }) {
                 prev ? { ...prev, ...updateData } : prev
             );
 
+            refetchReservation()
+
         } catch (e) {
             console.error("Check-in/out failed:", e);
         }
@@ -587,21 +589,20 @@ export function ReservationProvider({ initialReservation, children }) {
         const { default: jsPDF } = await import('jspdf');
         const { default: autoTable } = await import('jspdf-autotable');
 
-
         const doc = new jsPDF();
         const res = initialReservation || {};
         const arrival = res.check_in_at
-            ? `Check-in: ${dayjs(res.check_in_at).format('YY/MM/DD - hh:mm A')}`
-            : `Check-in: ${dayjs(res.checkInDate).format('YY/MM/DD')}`;
+            ? `Check-in: ${dayjs(res.check_in_at).format('DD/MM/YY - hh:mm A')}`
+            : `Check-in: ${dayjs(res.checkInDate).format('DD/MM/YY')}`;
 
         const departure = res.check_out_at
-            ? `Check-out: ${dayjs(res.check_out_at).format('YY/MM/DD - hh:mm A')}`
-            : `Check-out: ${dayjs(res.checkOutDate).format('YY/MM/DD')}`;
-
+            ? `Check-out: ${dayjs(res.check_out_at).format('DD/MM/YY - hh:mm A')}`
+            : `Check-out: ${dayjs(res.checkOutDate).format('DD/MM/YY')}`;
 
         const n = nights;
         const img = new Image();
-        img.src = "/logo.png"; // public/logo.png
+        img.src = "/logo.png";
+
         img.onload = () => {
             // Logo + Hotel title
             doc.addImage(img, "PNG", 14, 10, 20, 20);
@@ -611,24 +612,25 @@ export function ReservationProvider({ initialReservation, children }) {
             doc.setFontSize(20);
             doc.text("Hotel Lovusiyah", 34, 18);
 
-            // Address & Phone (smaller, below name)
+            // Address & Phone
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.text("Power House Rd, Jaffna", 34, 24);
             doc.text("Phone: 0212 221 326", 34, 29);
 
-            // Date (right side, aligned with header block)
+            // Date
             doc.setFontSize(10);
-            doc.text(`Date: ${dayjs().format('YY/MM/DD HH:mm')}`, 200 - 14, 18, { align: 'right' });
+            doc.text(`Date: ${dayjs().format('DD/MM/YY HH:mm')}`, 200 - 14, 18, { align: 'right' });
             let currentY = 35;
 
             const pageWidth = doc.internal.pageSize.getWidth();
-            doc.setDrawColor(150);   // grey color (0=black, 255=white)
-            doc.setLineWidth(0.3);   // thin line
-            doc.line(14, currentY, pageWidth - 14, currentY); // x1, y1, x2, y2
-            // Section spacing
-            currentY += 10; // add space below line
-            // Guest & Stay
+            doc.setDrawColor(150);
+            doc.setLineWidth(0.3);
+            doc.line(14, currentY, pageWidth - 14, currentY);
+
+            currentY += 10;
+
+            // Guest & Booking Details
             doc.setFont("helvetica", "bold");
             doc.setFontSize(12);
             doc.text('Guest & Booking Details', 14, currentY);
@@ -636,8 +638,8 @@ export function ReservationProvider({ initialReservation, children }) {
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
 
-            const leftColumnX = 14;    // X position for left column
-            const rightColumnX = 105;  // X position for right column
+            const leftColumnX = 14;
+            const rightColumnX = 105;
             const lineHeight = 6;
 
             const leftColumn = [
@@ -654,20 +656,17 @@ export function ReservationProvider({ initialReservation, children }) {
                 `Nights: ${n}`,
             ];
 
-            // Draw left column
             leftColumn.forEach((text, i) => {
                 doc.text(text, leftColumnX, currentY + 6 + i * lineHeight);
             });
 
-            // Draw right column
             rightColumn.forEach((text, i) => {
                 doc.text(text, rightColumnX, currentY + 6 + i * lineHeight);
             });
 
             currentY += Math.max(leftColumn.length, rightColumn.length) * lineHeight + 6;
 
-
-            // Rooms
+            // Rooms Table
             autoTable(doc, {
                 startY: currentY,
                 head: [['Room', 'Type', 'Rate (LKR)', 'Nights', 'Amount (LKR)']],
@@ -685,6 +684,7 @@ export function ReservationProvider({ initialReservation, children }) {
                 styles: { fontSize: 9 },
                 headStyles: { fillColor: [15, 23, 42] },
             });
+
             let y = (doc.lastAutoTable?.finalY ?? 68) + 8;
 
             // Services
@@ -693,7 +693,7 @@ export function ReservationProvider({ initialReservation, children }) {
                 autoTable(doc, {
                     startY: y + 4,
                     head: [['Service', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-                    body: (services.length ? services : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((s) => [
+                    body: services.map((s) => [
                         s.title, s.qty, Number(s.rate || 0).toFixed(2), Number(s.amount || 0).toFixed(2)
                     ]),
                     theme: 'grid',
@@ -701,17 +701,20 @@ export function ReservationProvider({ initialReservation, children }) {
                     headStyles: { fillColor: [15, 23, 42] },
                 });
 
-                y = (doc.lastAutoTable?.finalY ?? y) + 8;
+                y = (doc.lastAutoTable.finalY || y) + 10;
+                if (y > doc.internal.pageSize.height - 60) {
+                    doc.addPage();
+                    y = 20;
+                }
             }
 
             // Foods
-
             if (foods.length) {
                 doc.text('Foods', 14, y);
                 autoTable(doc, {
                     startY: y + 4,
                     head: [['Food', 'Qty', 'Rate (LKR)', 'Amount (LKR)']],
-                    body: (foods.length ? foods : [{ title: '—', qty: '—', rate: 0, amount: 0 }]).map((f) => [
+                    body: foods.map((f) => [
                         f.title, f.qty, Number(f.rate || 0).toFixed(2), Number(f.amount || 0).toFixed(2)
                     ]),
                     theme: 'grid',
@@ -719,16 +722,20 @@ export function ReservationProvider({ initialReservation, children }) {
                     headStyles: { fillColor: [15, 23, 42] },
                 });
 
-                y = (doc.lastAutoTable?.finalY ?? y) + 8;
+                y = (doc.lastAutoTable.finalY || y) + 10;
+                if (y > doc.internal.pageSize.height - 60) {
+                    doc.addPage();
+                    y = 20;
+                }
             }
-            // Payments
 
+            // Payments
             if (payments.length) {
                 doc.text('Payments', 14, y);
                 autoTable(doc, {
                     startY: y + 4,
                     head: [['Type', 'Method', 'Date', 'Amount (LKR)']],
-                    body: (payments.length ? payments : [{ type: '—', method: '—', date: dayjs().format('YYYY-MM-DD'), amount: 0 }]).map((p) => [
+                    body: payments.map((p) => [
                         p.type, p.method, dayjs(p.date).format('YYYY-MM-DD'), Number(p.amount || 0).toFixed(2)
                     ]),
                     theme: 'grid',
@@ -736,7 +743,11 @@ export function ReservationProvider({ initialReservation, children }) {
                     headStyles: { fillColor: [15, 23, 42] },
                 });
 
-                y = (doc.lastAutoTable?.finalY ?? y) + 10;
+                y = (doc.lastAutoTable.finalY || y) + 10;
+                if (y > doc.internal.pageSize.height - 60) {
+                    doc.addPage();
+                    y = 20;
+                }
             }
 
             // Discounts
@@ -754,10 +765,14 @@ export function ReservationProvider({ initialReservation, children }) {
                     headStyles: { fillColor: [15, 23, 42] },
                 });
 
-                y = (doc.lastAutoTable?.finalY ?? y) + 10;
+                y = (doc.lastAutoTable.finalY || y) + 10;
+                if (y > doc.internal.pageSize.height - 60) {
+                    doc.addPage();
+                    y = 20;
+                }
             }
-            const subtotal = roomCharges + otherCharges;
 
+            // Totals
             const totalsBody = [
                 ['Room Charges', formatLKR(roomCharges)],
                 ['Other Charges', formatLKR(otherCharges)],
@@ -771,6 +786,11 @@ export function ReservationProvider({ initialReservation, children }) {
 
             if (balance && balance > 0) {
                 totalsBody.push(['Balance', formatLKR(balance)]);
+            }
+
+            if (y > doc.internal.pageSize.height - 130) {
+                doc.addPage();
+                y = 50;
             }
 
             autoTable(doc, {
@@ -788,58 +808,78 @@ export function ReservationProvider({ initialReservation, children }) {
                 },
             });
 
-            y = (doc.lastAutoTable?.finalY ?? y) + 8;
-
-            // Footer (Signatures + Notes)
+            const pageCount = doc.getNumberOfPages();
             const pageHeight = doc.internal.pageSize.height;
 
-            // --- Signatures ---
-            const marginX = 14;
-            const centerY = pageHeight - 40; // position above footer
+            // Add footers and page numbers
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
 
-            // Manager (left side)
-            doc.setFontSize(10);
-            doc.setTextColor(0);
-            doc.text("....................", marginX, centerY);
-            doc.text("Receptionist ", marginX, centerY + 6);
+                // Page numbers
+                doc.setFontSize(9);
+                doc.text(`Page ${i} of ${pageCount}`, pageWidth - 20, pageHeight - 10, { align: 'right' });
 
-            // User/Guest (right side)
-            doc.text("....................", pageWidth - marginX - 30, centerY);
-            doc.text("Guest", pageWidth - marginX - 25, centerY + 6);
+                if (i === pageCount) {
+                    const footerY = pageHeight - 60;
 
-            // --- Bank Details ---
-            y += 10; // spacing after totals
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(11);
-            doc.text("Bank Details", 14, y);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
+                    // Signatures
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(10);
+                    doc.text("....................", 124, footerY);
+                    doc.text("Receptionist", 124, footerY + 6);
 
-            [
-                `Bank: Commercial Bank`,
-                `Account Name: HOTEL LOVUSIYAH PVT LTD`,
-                `Account No: 1000585733`,
-                `Branch: Jaffna`
-            ].forEach((line, i) => doc.text(line, 14, y + 6 + i * 6));
+                    doc.text("..................", pageWidth - 35, footerY);
+                    doc.text("Guest", pageWidth - 31, footerY + 6);
 
-            y += 36; // leave space after bank details
+                    // Bank Details
+                    const bankY = footerY;
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(11);
+                    doc.text("Bank Details", 14, bankY);
 
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(10);
+                    [
+                        `Bank: Commercial Bank`,
+                        `Account Name: HOTEL LOVUSIYAH PVT LTD`,
+                        `Account No: 1000585733`,
+                        `Branch: Jaffna`
+                    ].forEach((line, i) => doc.text(line, 14, bankY + 6 + i * 6));
+                    // Footer separator line
+                    doc.setDrawColor(180);       // light gray line
+                    doc.setLineWidth(0.3);       // thin line
+                    doc.line(14, pageHeight - 26, pageWidth - 14, pageHeight - 26); // x1, y1, x2, y2
 
+                    // Footer text
+                    doc.setFontSize(9);
+                    doc.setTextColor(100);
+                    doc.text("Digital invoice from Hotel Lovusiyah", pageWidth / 2, pageHeight - 20, { align: 'center' });
+                    doc.text("Smart hotel management solution by Infonits.", pageWidth / 2, pageHeight - 14, { align: 'center' });
+                }
+            }
 
-            // --- Footer (centered below) ---
-            doc.setFontSize(9);
-            doc.setTextColor(100);
-            doc.text("Digital invoice from Hotel Lovusiyah", pageWidth / 2, pageHeight - 20, { align: 'center' });
-            doc.text("Smart hotel management solution by Infonits.", pageWidth / 2, pageHeight - 14, { align: 'center' });
+            // Open PDF in new window for printing
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            const win = window.open(pdfUrl, '_blank');
 
-            // Print preview
-            const blobUrl = doc.output('bloburl');
-            const win = window.open(blobUrl);
-            win.onload = () => win.print();
+            if (win) {
+                win.onload = () => {
+                    win.print();
+                    // Clean up the blob URL after printing
+                    setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
+                };
+            } else {
+                // Fallback: download the PDF if popup is blocked
+                doc.save(`Invoice_${res?.code || 'hotel'}_${dayjs().format('YYYYMMDD')}.pdf`);
+            }
         };
 
-        win.onload = () => {
-            win.print();
+        // Handle image load error
+        img.onerror = () => {
+            console.error('Failed to load logo image');
+            // You could still generate the PDF without the logo
+            alert('Logo failed to load. Please check the logo file path.');
         };
     };
 

@@ -13,6 +13,7 @@ export default function ReservationView() {
     const [loading, setLoading] = useState(true);
     const [initialReservation, setInitialReservation] = useState(null);
     const [error, setError] = useState(null);
+    const [refetchTrigger, setRefetchTrigger] = useState(0);
 
     useEffect(() => {
         let alive = true;
@@ -122,9 +123,11 @@ export default function ReservationView() {
         })();
 
         return () => { alive = false; };
-    }, [id]);
+    }, [id, refetchTrigger]);
 
-
+    const refetchReservation = () => {
+        setRefetchTrigger(prev => prev + 1);
+    };
 
     if (loading) {
         // Smooth skeleton matching your design
@@ -166,7 +169,7 @@ export default function ReservationView() {
         );
     }
     return (
-        <ReservationProvider initialReservation={initialReservation}>
+        <ReservationProvider initialReservation={initialReservation} refetchReservation={refetchReservation}>
             <div className="flex-1 p-8 overflow-y-auto">
                 <div className="mb-4 flex justify-end">
 
