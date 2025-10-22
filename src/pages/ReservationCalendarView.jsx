@@ -411,7 +411,7 @@ export default function ReservationCalendarView() {
                                                                         ? 'bg-emerald-500/20 text-emerald-100'
                                                                         : 'bg-emerald-50 text-emerald-700'
                                                                         }`}>
-                                                                        <Icon icon="material-symbols:hotel-outline" height={24} width={24} />
+                                                                        <Icon icon="material-symbols:hotel-outline" className='h-6 w-6' />
                                                                         <span className="font-semibold text-xs">
                                                                             {availability.reserved}/{availability.available}
                                                                         </span>
@@ -461,7 +461,7 @@ export default function ReservationCalendarView() {
                                 <h5 className="font-medium text-slate-800 mb-3">
                                     Reservations ({getDateReservationsGrouped(selectedDate).length})
                                 </h5>
-                                <div className={`space-y-2 h-96 overflow-y-auto ${loading ? 'animate-pulse' : ''}`}>
+                                <div className={`space-y-2 md:h-80 h-96 overflow-y-auto ${loading ? 'animate-pulse' : ''}`}>
                                     {loading ? (
                                         Array.from({ length: 4 }).map((_, i) => (
                                             <div key={i} className="w-full p-3 bg-slate-50/50 rounded-lg border border-slate-100">
