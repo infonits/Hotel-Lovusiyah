@@ -461,7 +461,7 @@ export default function ReservationCalendarView() {
                                 <h5 className="font-medium text-slate-800 mb-3">
                                     Reservations ({getDateReservationsGrouped(selectedDate).length})
                                 </h5>
-                                <div className={`space-y-2 md:h-80 h-96 overflow-y-auto ${loading ? 'animate-pulse' : ''}`}>
+                                <div className={`space-y-2 h-80 md:h-96 overflow-y-auto ${loading ? 'animate-pulse' : ''}`}>
                                     {loading ? (
                                         Array.from({ length: 4 }).map((_, i) => (
                                             <div key={i} className="w-full p-3 bg-slate-50/50 rounded-lg border border-slate-100">
@@ -518,7 +518,7 @@ export default function ReservationCalendarView() {
                                                 </button>
                                             ))}
                                             {getDateReservationsGrouped(selectedDate).length === 0 && (
-                                                <div className="flex flex-col items-center justify-center h-96 ">
+                                                <div className="flex flex-col items-center justify-center h-80 md:h-96   ">
                                                     <Icon icon="lucide:calendar" width="48" height="48" className="text-slate-400 mx-auto mb-4" />
 
                                                     <p className="text-sm text-slate-500">No reservations for this day</p>
