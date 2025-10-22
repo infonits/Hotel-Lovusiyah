@@ -397,10 +397,7 @@ export default function ReservationCalendarView() {
                                                         ) : (
                                                             <>
                                                                 <div className={`${isSelected ? 'text-emerald-200' : 'text-emerald-600'} font-medium`}>
-                                                                    {availability.available} free
-                                                                </div>
-                                                                <div className={`${isSelected ? 'text-red-200' : 'text-red-600'}`}>
-                                                                    {availability.reserved} booked
+                                                                    {availability.reserved}/{availability.available}                                                                    booked
                                                                 </div>
                                                             </>
                                                         )}
