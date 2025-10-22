@@ -411,7 +411,7 @@ export default function ReservationCalendarView() {
                                                                         ? 'bg-emerald-500/20 text-emerald-100'
                                                                         : 'bg-emerald-50 text-emerald-700'
                                                                         }`}>
-                                                                        <Icon icon="material-symbols:hotel-outline" className='h-6 w-6' />
+                                                                        <Icon icon="material-symbols:hotel-outline" className='h-4 w-4 md:h-6 md:w-6' />
                                                                         <span className="font-semibold text-xs">
                                                                             {availability.reserved}/{availability.available}
                                                                         </span>
@@ -466,7 +466,7 @@ export default function ReservationCalendarView() {
                                         Array.from({ length: 4 }).map((_, i) => (
                                             <div key={i} className="w-full p-3 bg-slate-50/50 rounded-lg border border-slate-100">
                                                 <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
-                                                <div className="h-3 bg-slate-200 rounded w-1/2" />
+                                                <div classFName="h-3 bg-slate-200 rounded w-1/2" />
                                             </div>
                                         ))
                                     ) : (
