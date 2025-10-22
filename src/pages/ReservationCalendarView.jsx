@@ -52,7 +52,7 @@ export default function ReservationCalendarView() {
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const calendarDays = generateCalendarDays(year, month);
+    const calendarDays = useMemo(() => generateCalendarDays(year, month), [year, month]);
 
     /* ----------------- fetch month data ----------------- */
     const fetchMonth = async (year, month) => {
@@ -96,10 +96,12 @@ export default function ReservationCalendarView() {
             if (rgErr) throw rgErr;
             const rgFiltered = rgData.filter(r => resvIds.includes(r.reservation_id));
 
-            setRooms(roomData || []);
-            setResvCore(resvData || []);
-            setResvRooms(rrFiltered || []);
-            setResvGuests(rgFiltered || []);
+            // only update if data actually changed (prevents re-render flicker)
+            if (JSON.stringify(roomData) !== JSON.stringify(rooms)) setRooms(roomData || []);
+            if (JSON.stringify(resvData) !== JSON.stringify(resvCore)) setResvCore(resvData || []);
+            if (JSON.stringify(rrFiltered) !== JSON.stringify(resvRooms)) setResvRooms(rrFiltered || []);
+            if (JSON.stringify(rgFiltered) !== JSON.stringify(resvGuests)) setResvGuests(rgFiltered || []);
+
         } catch (e) {
             console.error(e);
             setRooms([]);
@@ -111,9 +113,17 @@ export default function ReservationCalendarView() {
         }
     };
 
+
+
     useEffect(() => {
-        fetchMonth(year, month);
+        let mounted = true;
+        setLoading(true);
+        fetchMonth(year, month).finally(() => {
+            if (mounted) setLoading(false);
+        });
+        return () => { mounted = false };
     }, [year, month]);
+
 
     const goToday = () => {
         const t = dayjs();
@@ -396,7 +406,7 @@ export default function ReservationCalendarView() {
                                                             </div>
                                                         ) : (
                                                             <>
-                                                                <div className="relative group">
+                                                                <div className="relative group" title={`${availability.reserved} reserved of ${availability.available} available`} >
                                                                     <div className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer ${isSelected
                                                                         ? 'bg-emerald-500/20 text-emerald-100'
                                                                         : 'bg-emerald-50 text-emerald-700'
@@ -407,14 +417,7 @@ export default function ReservationCalendarView() {
                                                                         </span>
                                                                     </div>
 
-                                                                    {/* Tooltip */}
-                                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none">
-                                                                        {availability.reserved} reserved of {availability.available} available
-                                                                        {/* Arrow */}
-                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-                                                                            <div className="border-4 border-transparent border-t-gray-900"></div>
-                                                                        </div>
-                                                                    </div>
+
                                                                 </div>
                                                             </>
                                                         )}
@@ -561,6 +564,6 @@ export default function ReservationCalendarView() {
                     </div>
                 </div>
             </div>
-        </main>
+        </main >
     );
 }
