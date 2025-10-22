@@ -407,11 +407,11 @@ export default function ReservationCalendarView() {
                                                         ) : (
                                                             <>
                                                                 <div className="relative group" title={`${availability.reserved} reserved of ${availability.available} available`} >
-                                                                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer ${isSelected
+                                                                    <div className={`flex items-center gap-2 px-1 py-1 rounded-lg transition-colors cursor-pointer ${isSelected
                                                                         ? 'bg-emerald-500/20 text-emerald-100'
                                                                         : 'bg-emerald-50 text-emerald-700'
                                                                         }`}>
-                                                                        <Icon icon="material-symbols:hotel-outline" className='h-6 w-6' />
+                                                                        <Icon icon="material-symbols:hotel-outline" height={24} width={24} />
                                                                         <span className="font-semibold text-xs">
                                                                             {availability.reserved}/{availability.available}
                                                                         </span>
@@ -484,7 +484,7 @@ export default function ReservationCalendarView() {
                                                         <div className='flex'>
 
                                                             <span
-                                                                className={`px-2 py-1 rounded text-xs font-medium
+                                                                className={`p-1 rounded text-xs font-medium
     ${reservation.status === 'confirmed'
                                                                         ? 'bg-emerald-100 text-emerald-700'
                                                                         : reservation.status === 'checked_in'
@@ -497,19 +497,23 @@ export default function ReservationCalendarView() {
                                                                 {reservation.status}
 
                                                             </span>
-                                                            <span
-                                                                onClick={() => navigate(`/dashboard/reservations/${r.id}`)}
-                                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-                                                                title="Open reservation"
-                                                            >
-                                                                <Icon icon="fluent:open-24-regular" className="w-4 h-4" />
-                                                            </span>
+
                                                         </div>
 
                                                     </div>
-                                                    <div className="text-sm text-slate-600">
-                                                        <div>{reservation.guest}</div>
-                                                        {reservation.email && <div className="text-xs mt-1">{reservation.email}</div>}
+                                                    <div className="flex items-start justify-between mt-3">
+
+                                                        <div className="text-sm text-slate-600">
+                                                            <div>{reservation.guest}</div>
+                                                            {reservation.email && <div className="text-xs mt-1">{reservation.email}</div>}
+                                                        </div>
+                                                        <span
+                                                            onClick={() => navigate(`/dashboard/reservations/${r.id}`)}
+                                                            className="inline-flex items-center justify-center rounded-lg  text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                            title="Open reservation"
+                                                        >
+                                                            <Icon icon="fluent:open-24-regular" className="w-4 h-4" />
+                                                        </span>
                                                     </div>
                                                 </button>
                                             ))}
