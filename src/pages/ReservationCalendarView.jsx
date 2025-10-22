@@ -383,7 +383,7 @@ export default function ReservationCalendarView() {
                         ${loading ? 'opacity-60 pointer-events-none' : ''}`}
                                         >
                                             <div className="h-full flex flex-col justify-between">
-                                                <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-800'}`}>
+                                                <span className={`text-2xl font-medium ${isSelected ? 'text-white' : 'text-slate-800'}`}>
                                                     {day}
                                                 </span>
 
@@ -396,9 +396,12 @@ export default function ReservationCalendarView() {
                                                             </div>
                                                         ) : (
                                                             <>
-                                                                <div className={`${isSelected ? 'text-emerald-200' : 'text-emerald-600'} font-medium`}>
-                                                                    {availability.reserved}/{availability.available}                                                                    booked
-                                                                </div>
+                                                                <span className={`${isSelected ? 'text-blue-200' : 'text-blue-600'} font-medium`}>
+                                                                    {availability.reserved}/{availability.available}
+                                                                </span>
+                                                                <span className={`${isSelected ? 'text-emerald-200' : 'text-emerald-600'} font-medium ps-1`}>
+                                                                    booked
+                                                                </span>
                                                             </>
                                                         )}
                                                     </div>
