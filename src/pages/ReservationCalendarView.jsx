@@ -401,7 +401,7 @@ export default function ReservationCalendarView() {
                                                                         ? 'bg-emerald-500/20 text-emerald-100'
                                                                         : 'bg-emerald-50 text-emerald-700'
                                                                         }`}>
-                                                                        <Icon icon="material-symbols:hotel-outline" className='h-5 w-5' />
+                                                                        <Icon icon="material-symbols:hotel-outline" className='h-6 w-6' />
                                                                         <span className="font-semibold text-xs">
                                                                             {availability.reserved}/{availability.available}
                                                                         </span>
