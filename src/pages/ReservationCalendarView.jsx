@@ -371,6 +371,7 @@ export default function ReservationCalendarView() {
                                     if (!day) {
                                         return <div key={`pad-${index}`} className="aspect-square" />;
                                     }
+                                    const isPast = dayjs().year(year).month(month).date(day).isBefore(today, 'day');
 
                                     const availability = getRoomAvailability(day);
                                     const isSelected = selectedDate === day;
@@ -389,7 +390,9 @@ export default function ReservationCalendarView() {
                                                     ? 'border-slate-900 bg-slate-800 text-white'
                                                     : isToday
                                                         ? 'border-emerald-500 bg-emerald-50'
-                                                        : 'border-gray-100 hover:bg-slate-50'}
+                                                        : isPast
+                                                            ? 'border-gray-100 text-gray-400 bg-gray-50/50'
+                                                            : 'border-gray-100 hover:bg-slate-50'}}
                         ${loading ? 'opacity-60 pointer-events-none' : ''}`}
                                         >
                                             <div className="h-full flex flex-col justify-between">
@@ -407,15 +410,27 @@ export default function ReservationCalendarView() {
                                                         ) : (
                                                             <>
                                                                 <div className="relative group" title={`${availability.reserved} reserved of ${availability.available} available`} >
-                                                                    <div className={`flex items-center gap-2 px-1 py-1 rounded-lg transition-colors cursor-pointer ${isSelected
-                                                                        ? 'bg-emerald-500/20 text-emerald-100'
-                                                                        : 'bg-emerald-50 text-emerald-700'
-                                                                        }`}>
-                                                                        <Icon icon="material-symbols:hotel-outline" className='h-4 w-4 md:h-6 md:w-6' />
+                                                                    <div
+                                                                        className={`flex items-center gap-2 px-1 py-1 rounded-lg transition-colors cursor-pointer ${isPast
+                                                                            ? 'bg-gray-100 text-gray-400'
+                                                                            : isSelected
+                                                                                ? availability.reserved > 0
+                                                                                    ? 'bg-blue-500/20 text-blue-100'
+                                                                                    : 'bg-emerald-500/20 text-emerald-100'
+                                                                                : availability.reserved > 0
+                                                                                    ? 'bg-blue-100 text-blue-600'
+                                                                                    : 'bg-emerald-50 text-emerald-700'
+                                                                            }`}
+                                                                    >
+                                                                        <Icon
+                                                                            icon="material-symbols:hotel-outline"
+                                                                            className="h-4 w-4 md:h-6 md:w-6"
+                                                                        />
                                                                         <span className="font-semibold text-xs">
                                                                             {availability.reserved}/{availability.available}
                                                                         </span>
                                                                     </div>
+
 
 
                                                                 </div>
@@ -448,88 +463,92 @@ export default function ReservationCalendarView() {
                     {/* Sidebar */}
                     <div className="space-y-6 xl:col-span-2">
                         {selectedDate ? (
-                            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h4 className="text-lg font-semibold text-slate-800">
-                                        {monthNames[month]} {selectedDate}, {year}
-                                    </h4>
-                                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                                        {getRoomAvailability(selectedDate).available} available
-                                    </span>
+                            <>
+                                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-lg font-semibold text-slate-800">
+                                            {monthNames[month]} {selectedDate}, {year}
+                                        </h4>
+                                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                                            {getRoomAvailability(selectedDate).available} available
+                                        </span>
+                                    </div>
                                 </div>
+                                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
 
-                                <h5 className="font-medium text-slate-800 mb-3">
-                                    Reservations ({getDateReservationsGrouped(selectedDate).length})
-                                </h5>
-                                <div className={`space-y-2 h-80 md:h-96 overflow-y-auto ${loading ? 'animate-pulse' : ''}`}>
-                                    {loading ? (
-                                        Array.from({ length: 4 }).map((_, i) => (
-                                            <div key={i} className="w-full p-3 bg-slate-50/50 rounded-lg border border-slate-100">
-                                                <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
-                                                <div classFName="h-3 bg-slate-200 rounded w-1/2" />
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <>
-                                            {getDateReservationsGrouped(selectedDate).map(reservation => (
-                                                <button
-                                                    key={reservation.id}
-                                                    onClick={() => openReservation(reservation)}
-                                                    className="w-full text-left border border-slate-300 p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                                                >
-
-                                                    <div className="flex items-start justify-between mb-1">
-
-                                                        <span className="font-medium text-slate-800">Rooms {reservation.rooms}</span>
-                                                        <div className='flex'>
-
-                                                            <span
-                                                                className={`p-1 rounded text-xs font-medium
-    ${reservation.status === 'confirmed'
-                                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                                        : reservation.status === 'checked_in'
-                                                                            ? 'bg-blue-100 text-blue-700'
-                                                                            : reservation.status === 'checked_out'
-                                                                                ? 'bg-red-100 text-red-700'
-                                                                                : 'bg-amber-100 text-amber-700'
-                                                                    }`}
-                                                            >
-                                                                {reservation.status}
-
-                                                            </span>
-
-                                                        </div>
-
-                                                    </div>
-                                                    <div className="flex items-start justify-between mt-3">
-
-                                                        <div className="text-sm text-slate-600">
-                                                            <div>{reservation.guest}</div>
-                                                            {reservation.email && <div className="text-xs mt-1">{reservation.email}</div>}
-                                                        </div>
-                                                        <span
-                                                            onClick={() => navigate(`/dashboard/reservations/${r.id}`)}
-                                                            className="inline-flex items-center justify-center rounded-lg  text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-                                                            title="Open reservation"
-                                                        >
-                                                            <Icon icon="fluent:open-24-regular" className="w-4 h-4" />
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                            {getDateReservationsGrouped(selectedDate).length === 0 && (
-                                                <div className="flex flex-col items-center justify-center h-80 md:h-96   ">
-                                                    <Icon icon="lucide:calendar" width="48" height="48" className="text-slate-400 mx-auto mb-4" />
-
-                                                    <p className="text-sm text-slate-500">No reservations for this day</p>
+                                    <h5 className="font-medium text-slate-800 mb-3">
+                                        Active Reservations ({getDateReservationsGrouped(selectedDate).length})
+                                    </h5>
+                                    <div className={`space-y-2 h-80 md:h-96 overflow-y-auto ${loading ? 'animate-pulse' : ''}`}>
+                                        {loading ? (
+                                            Array.from({ length: 4 }).map((_, i) => (
+                                                <div key={i} className="w-full p-3 bg-slate-50/50 rounded-lg border border-slate-100">
+                                                    <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
+                                                    <div classFName="h-3 bg-slate-200 rounded w-1/2" />
                                                 </div>
-                                            )}
-                                        </>
-                                    )}
+                                            ))
+                                        ) : (
+                                            <>
+                                                {getDateReservationsGrouped(selectedDate).map(reservation => (
+                                                    <button
+                                                        key={reservation.id}
+                                                        onClick={() => openReservation(reservation)}
+                                                        className="w-full text-left border border-slate-300 p-3 bg-slate-50/50 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                                                    >
+
+                                                        <div className="flex items-start justify-between mb-1">
+
+                                                            <span className="font-medium text-slate-800">Rooms {reservation.rooms}</span>
+                                                            <div className='flex'>
+
+                                                                <span
+                                                                    className={`p-1 rounded text-xs font-medium
+    ${reservation.status === 'confirmed'
+                                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                                            : reservation.status === 'checked_in'
+                                                                                ? 'bg-blue-100 text-blue-700'
+                                                                                : reservation.status === 'checked_out'
+                                                                                    ? 'bg-red-100 text-red-700'
+                                                                                    : 'bg-amber-100 text-amber-700'
+                                                                        }`}
+                                                                >
+                                                                    {reservation.status}
+
+                                                                </span>
+
+                                                            </div>
+
+                                                        </div>
+                                                        <div className="flex items-start justify-between mt-3">
+
+                                                            <div className="text-sm text-slate-600">
+                                                                <div>{reservation.guest}</div>
+                                                                {reservation.email && <div className="text-xs mt-1">{reservation.email}</div>}
+                                                            </div>
+                                                            <span
+                                                                onClick={() => navigate(`/dashboard/reservations/${r.id}`)}
+                                                                className="inline-flex items-center justify-center rounded-lg  text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                                title="Open reservation"
+                                                            >
+                                                                <Icon icon="fluent:open-24-regular" className="w-4 h-4" />
+                                                            </span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                                {getDateReservationsGrouped(selectedDate).length === 0 && (
+                                                    <div className="flex flex-col items-center justify-center h-80 md:h-96   ">
+                                                        <Icon icon="lucide:calendar" width="48" height="48" className="text-slate-400 mx-auto mb-4" />
+
+                                                        <p className="text-sm text-slate-500">No reservations for this day</p>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         ) : (
-                            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm">
+                            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 h-96 border border-white/20 shadow-sm flex items-center justify-center">
                                 <div className="text-center">
                                     <Icon icon="lucide:calendar" width="48" height="48" className="text-slate-400 mx-auto mb-4" />
                                     <h4 className="text-lg font-medium text-slate-800 mb-2">Select a Date</h4>
