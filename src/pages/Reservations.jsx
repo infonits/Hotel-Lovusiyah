@@ -39,43 +39,77 @@ export default function ReservationsPage() {
             const { data, error } = await supabase
                 .from('reservations')
                 .select(`
-                    id,
-                    status,
-                    reservation_number,
-                    estimated_total,
-                    check_in_date,
-                    check_out_date,
-                    reservation_guests (
-                        guest:guests (
-                            id,
-                            name,
-                            email,
-                            phone,
-                            nic
-                        )
-                    ),
-                    reservation_rooms (
-                        room:rooms (
-                            id,
-                            number,
-                            type,
-                            price
-                        )
-                    )
-                `)
+        id,
+        status,
+        reservation_number,
+        estimated_total,
+        check_in_date,
+        check_out_date,
+        reservation_guests (
+          guest:guests ( id, name, email, phone, nic )
+        ),
+        reservation_rooms (
+          room:rooms ( id, number, type, price )
+        ),
+        reservation_services ( id, title, qty, rate, amount ),
+        reservation_foods ( id, title, qty, rate, amount ),
+        discounts ( id, name, amount ),
+        payments ( id, type, method, date, amount )
+      `)
                 .order('check_in_date', { ascending: false });
 
             if (error) {
                 console.error('Error fetching reservations:', error);
                 setReservations([]);
-            } else {
-                setReservations(data || []);
+                setLoading(false);
+                return;
             }
+
+            const normalized = (data || []).map((r) => {
+                // compute nights robustly
+                const inDate = dayjs(r.check_in_date);
+                const outDate = dayjs(r.check_out_date);
+                const nights = (inDate.isValid() && outDate.isValid()) ? Math.max(0, outDate.diff(inDate, 'day')) : 0;
+
+                // room charges: use room.price as nightly rate
+                const roomCharges = (r.reservation_rooms || []).reduce((sum, rr) => {
+                    const rate = Number(rr?.room?.price || 0);
+                    return sum + rate * nights;
+                }, 0);
+
+                // other charges from services + foods (use amount field if present)
+                const svcAmount = (r.reservation_services || []).reduce((s, it) => s + Number(it.amount || (Number(it.qty || 0) * Number(it.rate || 0))), 0);
+                const foodAmount = (r.reservation_foods || []).reduce((s, it) => s + Number(it.amount || (Number(it.qty || 0) * Number(it.rate || 0))), 0);
+                const otherCharges = svcAmount + foodAmount;
+
+                // discounts
+                const discountTotal = (r.discounts || []).reduce((s, d) => s + Number(d.amount || 0), 0);
+
+                // payments (paid)
+                const paid = (r.payments || []).reduce((s, p) => s + Number(p.amount || 0), 0);
+
+                const computedTotal = Math.max(0, roomCharges + otherCharges - discountTotal);
+                const balance = Math.max(0, computedTotal - paid);
+
+                return {
+                    ...r,
+                    nights,
+                    roomCharges,
+                    otherCharges,
+                    discountTotal,
+                    paid,
+                    computedTotal,
+                    balance
+                };
+            });
+
+            setReservations(normalized);
             setLoading(false);
         };
 
         fetchReservations();
     }, []);
+
 
     /* ---------------- Filters ---------------- */
     const filtered = useMemo(() => {
@@ -128,7 +162,7 @@ export default function ReservationsPage() {
             0
         );
         const revenue = nonCancelled.reduce(
-            (sum, r) => sum + (Number(r.estimated_total) || 0),
+            (sum, r) => sum + (Number(r.computedTotal ?? r.estimated_total) || 0),
             0
         );
         return { total, confirmed, guests, revenue, chekedIn };
@@ -333,10 +367,27 @@ export default function ReservationsPage() {
 
                                         </td>
                                         <td className="px-6 py-4 text-slate-800">
-                                            {String(r.status).toLowerCase() === 'cancelled'
-                                                ? 'N/A'
-                                                : formatLKR(r.estimated_total || 0)}
+                                            {String(r.status).toLowerCase() === 'cancelled' ? (
+                                                'N/A'
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    {/* Main total */}
+                                                    <div className="font-medium">{formatLKR(r.computedTotal ?? r.estimated_total ?? 0)}</div>
+
+                                                    {/* Discount badge (only if discount exists) */}
+                                                    {Number(r.discountTotal || 0) > 0 && (
+                                                        <div
+                                                            className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800"
+                                                            title={`Discount: -${formatLKR(r.discountTotal)}`} // native tooltip
+                                                        >
+                                                            <Icon icon="lucide:percent" className="w-4 h-4" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </td>
+
+
                                         <td className="px-6 py-4 text-slate-800">
                                             {/* Action Buttons */}
                                             <div className="flex items-center gap-1">
