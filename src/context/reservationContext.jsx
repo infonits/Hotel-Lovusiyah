@@ -848,13 +848,14 @@ export function ReservationProvider({ initialReservation, refetchReservation, ch
                     // Footer separator line
                     doc.setDrawColor(180);       // light gray line
                     doc.setLineWidth(0.3);       // thin line
-                    doc.line(14, pageHeight - 26, pageWidth - 14, pageHeight - 26); // x1, y1, x2, y2
+                    doc.line(14, pageHeight - 32, pageWidth - 14, pageHeight - 32); // x1, y1, x2, y2
 
                     // Footer text
                     doc.setFontSize(9);
                     doc.setTextColor(100);
-                    doc.text("Digital invoice from Hotel Lovusiyah", pageWidth / 2, pageHeight - 20, { align: 'center' });
-                    doc.text("Smart hotel management solution by Infonits.", pageWidth / 2, pageHeight - 14, { align: 'center' });
+                    doc.text("Merry Christmas & Happy New Year 2026", pageWidth / 2, pageHeight - 26, { align: 'center' });
+                    doc.text("Digital invoice by infonits", pageWidth / 2, pageHeight - 20, { align: 'center' });
+                    // doc.text("Smart hotel management solution by Infonits.", pageWidth / 2, pageHeight - 14, { align: 'center' });
 
                 }
             }
