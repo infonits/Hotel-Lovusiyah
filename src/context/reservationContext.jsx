@@ -853,8 +853,27 @@ export function ReservationProvider({ initialReservation, refetchReservation, ch
                     // Footer text
                     doc.setFontSize(9);
                     doc.setTextColor(100);
-                    doc.text("Digital invoice from Hotel Lovusiyah", pageWidth / 2, pageHeight - 20, { align: 'center' });
-                    doc.text("Smart hotel management solution by Infonits.", pageWidth / 2, pageHeight - 14, { align: 'center' });
+                   doc.text(
+  "🎄 Wishing you a Merry Christmas and a Prosperous New Year 🎉",
+  pageWidth / 2,
+  pageHeight - 28,
+  { align: "center" }
+);
+
+doc.text(
+  "Digital invoice from Hotel Lovusiyah",
+  pageWidth / 2,
+  pageHeight - 20,
+  { align: "center" }
+);
+
+doc.text(
+  "Smart hotel management solution by Infonits.",
+  pageWidth / 2,
+  pageHeight - 14,
+  { align: "center" }
+);
+
                 }
             }
 
